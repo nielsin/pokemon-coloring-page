@@ -1,39 +1,47 @@
 import os
 import random
 
+import typer
 from prompt_toolkit import HTML, PromptSession, print_formatted_text
 from prompt_toolkit.completion import FuzzyCompleter, WordCompleter
 
 import config
 from utils import get_pokedex, pokemon_print_sheet
 
-# Define a list of suggestions
-pokedex, pokedex_name = get_pokedex()
-suggestions = pokedex_name.keys()
-
-# Create a prompt session with FuzzyCompleter
-word_completer = WordCompleter(suggestions)
-fuzzy_completer = FuzzyCompleter(word_completer)
-session = PromptSession(completer=fuzzy_completer)
-
 
 def select_n_random_pokemon(pokemon_list, n=6):
     return random.sample(pokemon_list, n)
 
 
-# Step 7: Run the prompt session in a loop to continuously accept input
-def main():
-    rows = config.ROWS
-    columns = config.COLUMNS
-    page_width = config.PAPER_WIDTH_MM
-    page_height = config.PAPER_HEIGHT_MM
-    margin = config.MARGIN_MM
-    font_size = config.FONT_SIZE_MM
+def main(
+    page_width: float = config.PAPER_WIDTH_MM,
+    page_height: float = config.PAPER_HEIGHT_MM,
+    margin: float = config.MARGIN_MM,
+    font_size: float = config.FONT_SIZE_MM,
+    rows: int = config.ROWS,
+    columns: int = config.COLUMNS,
+):
+    """
+    Pokémon Coloring Page CLI.
+    """
+
+    # Define a list of suggestions
+    pokedex, pokedex_name = get_pokedex()
+    suggestions = pokedex_name.keys()
+
+    # Create a prompt session with FuzzyCompleter
+    word_completer = WordCompleter(suggestions)
+    fuzzy_completer = FuzzyCompleter(word_completer)
+    session = PromptSession(completer=fuzzy_completer)
+
+    # Total number of pokemon to select
     n_pokemon = rows * columns
 
+    # Select n random pokemon
     selected_pokemon = select_n_random_pokemon(list(pokedex_name.keys()), n=n_pokemon)
     user_selected_pokemon = 0
     messages = []
+
     while True:
         try:
             # Clear the screen
@@ -127,4 +135,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    typer.run(main)
