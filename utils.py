@@ -212,6 +212,11 @@ def pokemon_print_sheet(
 
                 except Exception as e:
                     print(f"Error: {e}")
+                    print(
+                        f"Unable to generate coloring page for Pokemon ID: {pokemon_id}"
+                    )
+                    if pokemon_id in include_list:
+                        include_list.remove(pokemon_id)
                     continue
 
                 # Remove the pokemon from the include list

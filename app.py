@@ -9,10 +9,6 @@ import config
 from utils import get_pokedex, pokemon_print_sheet
 
 
-def select_n_random_pokemon(pokemon_list, n=6):
-    return random.sample(pokemon_list, n)
-
-
 def main(
     page_width: float = config.PAPER_WIDTH_MM,
     page_height: float = config.PAPER_HEIGHT_MM,
@@ -27,7 +23,7 @@ def main(
 
     # Define a list of suggestions
     pokedex, pokedex_name = get_pokedex()
-    suggestions = pokedex_name.keys()
+    suggestions = list(pokedex_name.keys())
 
     # Create a prompt session with FuzzyCompleter
     word_completer = WordCompleter(suggestions)
@@ -38,12 +34,21 @@ def main(
     n_pokemon = rows * columns
 
     # Select n random pokemon
-    selected_pokemon = select_n_random_pokemon(list(pokedex_name.keys()), n=n_pokemon)
+    selected_pokemon = []
     user_selected_pokemon = 0
     messages = []
 
     while True:
         try:
+            # Add missing pokemon to list
+            while len(selected_pokemon) < n_pokemon:
+                new_pokemon = random.choice(list(pokedex_name.keys()))
+                if new_pokemon not in selected_pokemon:
+                    selected_pokemon.append(new_pokemon)
+
+            # Remove pokemon if list is full
+            selected_pokemon = selected_pokemon[:n_pokemon]
+
             # Clear the screen
             os.system("cls" if os.name == "nt" else "clear")
 
@@ -75,11 +80,9 @@ def main(
                 )
             )
 
-            # print_formatted_text(HTML("<u><b>Pokémon Print CLI</b></u>"))
             print_formatted_text(HTML(""))
             print_formatted_text(HTML(f"Select {n_pokemon} Pokémon to print."))
             print_formatted_text(HTML("Adding more will replace the last one."))
-            # print_formatted_text(HTML("Press <b>Enter</b> to print."))
             print_formatted_text(HTML(""))
             print_formatted_text(
                 HTML("Selected Pokémon (<gray>auto</gray>/<green>manual</green>):")
@@ -105,7 +108,7 @@ def main(
             if not user_input:
                 break
 
-            if user_input not in suggestions:
+            if user_input not in pokedex_name.keys():
                 messages.append(HTML("<red>Invalid input. Please try again.</red>"))
                 continue
 
@@ -116,7 +119,6 @@ def main(
                 continue
 
             selected_pokemon.insert(0, user_input)
-            selected_pokemon = selected_pokemon[:n_pokemon]
             user_selected_pokemon += 1
 
         except (KeyboardInterrupt, EOFError):
