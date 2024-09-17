@@ -4,6 +4,7 @@ import random
 import typer
 from prompt_toolkit import HTML, PromptSession, print_formatted_text
 from prompt_toolkit.completion import FuzzyCompleter, WordCompleter
+from typing_extensions import Annotated
 
 import config
 from utils import get_pokedex, pokemon_print_sheet
@@ -136,5 +137,60 @@ def main(
     output_image.show()
 
 
+class PokemonColoringPageCLI:
+    # Get default values from config.py
+    PAGE_WIDTH_MM = config.PAPER_WIDTH_MM
+    PAGE_HEIGHT_MM = config.PAPER_HEIGHT_MM
+    MARGIN_MM = config.MARGIN_MM
+    FONT_SIZE_MM = config.FONT_SIZE_MM
+    ROWS = config.ROWS
+    COLUMNS = config.COLUMNS
+
+    def __init__(self):
+        pass
+
+    def n_pokemon(self):
+        return self.ROWS * self.COLUMNS
+
+    def run(
+        self,
+        page_width: Annotated[
+            int, typer.Option(help="Page width in mm")
+        ] = config.PAPER_WIDTH_MM,
+        page_height: Annotated[
+            int, typer.Option(help="Page height in mm")
+        ] = config.PAPER_HEIGHT_MM,
+        margin: Annotated[int, typer.Option(help="Margin in mm")] = config.MARGIN_MM,
+        font_size: Annotated[
+            int, typer.Option(help="Font size in mm")
+        ] = config.FONT_SIZE_MM,
+        rows: Annotated[int, typer.Option(help="Number of rows")] = config.ROWS,
+        columns: Annotated[
+            int, typer.Option(help="Number of columns")
+        ] = config.COLUMNS,
+    ):
+        """
+        Run the Pokémon Coloring Page CLI.
+        """
+
+        self.PAGE_WIDTH_MM = page_width
+        self.PAGE_HEIGHT_MM = page_height
+        self.MARGIN_MM = margin
+        self.FONT_SIZE_MM = font_size
+        self.ROWS = rows
+        self.COLUMNS = columns
+
+        main(
+            page_width=self.PAGE_WIDTH_MM,
+            page_height=self.PAGE_HEIGHT_MM,
+            margin=self.MARGIN_MM,
+            font_size=self.FONT_SIZE_MM,
+            rows=self.ROWS,
+            columns=self.COLUMNS,
+        )
+
+
 if __name__ == "__main__":
-    typer.run(main)
+    app = PokemonColoringPageCLI()
+    typer.run(app.run)
+    # typer.run(main)
