@@ -16,20 +16,24 @@ DPI = 200
 ROWS = 2
 COLUMNS = 3
 
-# Standard page sizes in mm
+# Standard page sizes in mm (width, height) in portrait orientation
 STANDARD_PAGE_SIZES_MM = {
-    "A0 Landscape": (1189, 841),
-    "A0 Portrait": (841, 1189),
-    "A1 Landscape": (841, 594),
-    "A1 Portrait": (594, 841),
-    "A2 Landscape": (594, 420),
-    "A2 Portrait": (420, 594),
-    "A3 Landscape": (420, 297),
-    "A3 Portrait": (297, 420),
-    "A4 Landscape": (297, 210),
-    "A4 Portrait": (210, 297),
-    "A5 Landscape": (210, 148),
-    "A5 Portrait": (148, 210),
-    "A6 Landscape": (148, 105),
-    "A6 Portrait": (105, 148),
+    "A0": (841, 1189),
+    "A1": (594, 841),
+    "A2": (420, 594),
+    "A3": (297, 420),
+    "A4": (210, 297),
+    "A5": (148, 210),
+    "Letter": (215.9, 279.4),
+    "Legal": (215.9, 355.6),
+    "Tabloid": (279.4, 431.8),
+    "Ledger": (279.4, 431.8),
+    "Junior Legal": (127, 203.2),
+    "Half Letter": (139.7, 215.9),
+    "Government Letter": (203.2, 266.7),
+    "Government Legal": (215.9, 330.2),
+    "ANSI A": (216, 279),
+    "ANSI B": (279, 432),
+    "ANSI C": (432, 559),
+    "ANSI D": (559, 864),
 }
