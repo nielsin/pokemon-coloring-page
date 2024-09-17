@@ -159,7 +159,8 @@ def img_resize(image: Image, max_width: int, max_height: int) -> Image:
 def pokemon_print_sheet(
     paper_height_mm: float = config.PAPER_HEIGHT_MM,
     paper_width_mm: float = config.PAPER_WIDTH_MM,
-    margin_mm: float = config.MARGIN_MM,
+    outer_margin_mm: float = config.OUTER_MARGIN_MM,
+    inner_margin_mm: float = config.INNER_MARGIN_MM,
     font_size_mm: float = config.FONT_SIZE_MM,
     dpi: int = config.DPI,
     rows: int = config.ROWS,
@@ -173,7 +174,8 @@ def pokemon_print_sheet(
     Args:
         paper_height_mm (float): The height of the paper in millimeters. Defaults to config.PAPER_HEIGHT_MM.
         paper_width_mm (float): The width of the paper in millimeters. Defaults to config.PAPER_WIDTH_MM.
-        margin_mm (float): The margin size in millimeters. Defaults to config.MARGIN_MM.
+        outer_margin_mm (float): The outer margin size in millimeters. Defaults to config.OUTER_MARGIN_MM.
+        inner_margin_mm (float): The inner margin size in millimeters. Defaults to config.INNER_MARGIN_MM.
         font_size_mm (float): The font size in millimeters. Defaults to config.FONT_SIZE_MM.
         dpi (int): The dots per inch. Defaults to config.DPI.
         rows (int): The number of rows in the sheet. Defaults to config.ROWS.
@@ -187,15 +189,20 @@ def pokemon_print_sheet(
     # Convert mm to pixels
     PAPER_WIDTH = int(paper_width_mm * dpi / 25.4)
     PAPER_HEIGHT = int(paper_height_mm * dpi / 25.4)
-    MARGIN = int(margin_mm * dpi / 25.4)
+    OUTER_MARGIN = int(outer_margin_mm * dpi / 25.4)
+    INNER_MARGIN = int(inner_margin_mm * dpi / 25.4)
     FONT_SIZE = int(font_size_mm * dpi / 25.4)
 
     # Create a new image for the paper
     output_image = Image.new("RGB", (PAPER_WIDTH, PAPER_HEIGHT), "white")
 
+    # Calculate the size of each image box
+    IMAGE_BOX_WIDTH = (PAPER_WIDTH - 2 * OUTER_MARGIN) // columns
+    IMAGE_BOX_HEIGHT = (PAPER_HEIGHT - 2 * OUTER_MARGIN) // rows
+
     # Set the maximum image size
-    MAX_IMAGE_WIDTH = PAPER_WIDTH // columns - 2 * MARGIN
-    MAX_IMAGE_HEIGHT = PAPER_HEIGHT // rows - 2 * MARGIN
+    MAX_IMAGE_WIDTH = IMAGE_BOX_WIDTH - 2 * INNER_MARGIN
+    MAX_IMAGE_HEIGHT = IMAGE_BOX_HEIGHT - 2 * INNER_MARGIN
 
     for i in range(rows):
         for j in range(columns):
@@ -229,17 +236,17 @@ def pokemon_print_sheet(
 
             coloring_page = img_resize(coloring_page, MAX_IMAGE_WIDTH, MAX_IMAGE_HEIGHT)
 
-            x = j * (PAPER_WIDTH // columns) + MARGIN
-            y = i * (PAPER_HEIGHT // rows) + MARGIN
+            x = j * IMAGE_BOX_WIDTH + OUTER_MARGIN
+            y = i * IMAGE_BOX_HEIGHT + OUTER_MARGIN
 
-            dx = (MAX_IMAGE_WIDTH - coloring_page.width) // 2
-            dy = (MAX_IMAGE_HEIGHT - coloring_page.height) // 2
+            dx = (IMAGE_BOX_WIDTH - coloring_page.width) // 2
+            dy = (IMAGE_BOX_HEIGHT - coloring_page.height) // 2
 
             output_image.paste(coloring_page, (x + dx, y + dy))
 
             draw = ImageDraw.Draw(output_image)
             draw.text(
-                (x, y),
+                (x + INNER_MARGIN, y + INNER_MARGIN),
                 f"#{pokemon_id} - {pokemon_name}",
                 fill="black",
                 font_size=FONT_SIZE,
@@ -249,12 +256,16 @@ def pokemon_print_sheet(
 
     # Draw horizontal lines
     for i in range(rows - 1):
-        y = (PAPER_HEIGHT // rows) * (i + 1)
-        draw.line((MARGIN, y, PAPER_WIDTH - MARGIN, y), fill="black", width=1)
+        y = IMAGE_BOX_HEIGHT * (i + 1) + OUTER_MARGIN
+        draw.line(
+            (OUTER_MARGIN, y, PAPER_WIDTH - OUTER_MARGIN, y), fill="black", width=1
+        )
 
     # Draw vertical lines
     for i in range(columns - 1):
-        x = (PAPER_WIDTH // columns) * (i + 1)
-        draw.line((x, MARGIN, x, PAPER_HEIGHT - MARGIN), fill="black", width=1)
+        x = IMAGE_BOX_WIDTH * (i + 1) + OUTER_MARGIN
+        draw.line(
+            (x, OUTER_MARGIN, x, PAPER_HEIGHT - OUTER_MARGIN), fill="black", width=1
+        )
 
     return output_image, exclude_list

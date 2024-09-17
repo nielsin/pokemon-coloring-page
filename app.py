@@ -13,7 +13,8 @@ from utils import get_pokedex, pokemon_print_sheet
 def main(
     page_width: float = config.PAPER_WIDTH_MM,
     page_height: float = config.PAPER_HEIGHT_MM,
-    margin: float = config.MARGIN_MM,
+    outer_margin: float = config.OUTER_MARGIN_MM,
+    inner_margin: float = config.INNER_MARGIN_MM,
     font_size: float = config.FONT_SIZE_MM,
     rows: int = config.ROWS,
     columns: int = config.COLUMNS,
@@ -68,7 +69,14 @@ def main(
                 )
             )
             print_formatted_text(
-                HTML(f"<{page_setup_color}>Margin:\t\t{margin}mm</{page_setup_color}>")
+                HTML(
+                    f"<{page_setup_color}>Outer margin:\t{outer_margin}mm</{page_setup_color}>"
+                )
+            )
+            print_formatted_text(
+                HTML(
+                    f"<{page_setup_color}>Inner margin:\t{inner_margin}mm</{page_setup_color}>"
+                )
             )
             print_formatted_text(
                 HTML(
@@ -131,7 +139,8 @@ def main(
         columns=columns,
         paper_width_mm=page_width,
         paper_height_mm=page_height,
-        margin_mm=margin,
+        outer_margin_mm=outer_margin,
+        inner_margin_mm=inner_margin,
         font_size_mm=font_size,
     )
     output_image.show()
@@ -141,7 +150,8 @@ class PokemonColoringPageCLI:
     # Get default values from config.py
     PAGE_WIDTH_MM = config.PAPER_WIDTH_MM
     PAGE_HEIGHT_MM = config.PAPER_HEIGHT_MM
-    MARGIN_MM = config.MARGIN_MM
+    OUTER_MARGIN_MM = config.OUTER_MARGIN_MM
+    INNER_MARGIN_MM = config.INNER_MARGIN_MM
     FONT_SIZE_MM = config.FONT_SIZE_MM
     ROWS = config.ROWS
     COLUMNS = config.COLUMNS
@@ -160,7 +170,12 @@ class PokemonColoringPageCLI:
         page_height: Annotated[
             int, typer.Option(help="Page height in mm")
         ] = config.PAPER_HEIGHT_MM,
-        margin: Annotated[int, typer.Option(help="Margin in mm")] = config.MARGIN_MM,
+        outer_margin: Annotated[
+            int, typer.Option(help="Outer margin in mm")
+        ] = config.OUTER_MARGIN_MM,
+        inner_margin: Annotated[
+            int, typer.Option(help="Inner margin in mm")
+        ] = config.INNER_MARGIN_MM,
         font_size: Annotated[
             int, typer.Option(help="Font size in mm")
         ] = config.FONT_SIZE_MM,
@@ -175,7 +190,8 @@ class PokemonColoringPageCLI:
 
         self.PAGE_WIDTH_MM = page_width
         self.PAGE_HEIGHT_MM = page_height
-        self.MARGIN_MM = margin
+        self.OUTER_MARGIN_MM = outer_margin
+        self.INNER_MARGIN_MM = inner_margin
         self.FONT_SIZE_MM = font_size
         self.ROWS = rows
         self.COLUMNS = columns
@@ -183,7 +199,8 @@ class PokemonColoringPageCLI:
         main(
             page_width=self.PAGE_WIDTH_MM,
             page_height=self.PAGE_HEIGHT_MM,
-            margin=self.MARGIN_MM,
+            outer_margin=self.OUTER_MARGIN_MM,
+            inner_margin=self.INNER_MARGIN_MM,
             font_size=self.FONT_SIZE_MM,
             rows=self.ROWS,
             columns=self.COLUMNS,
