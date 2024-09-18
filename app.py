@@ -32,6 +32,7 @@ class PokemonColoringPageCLI:
         self.color_selected_pokemon = "green"
         self.color_unselected_pokemon = "gray"
         self.color_message = "red"
+        self.color_highlight = "blue"
 
     def _n_pokemon(self):
         return self.ROWS * self.COLUMNS
@@ -107,11 +108,27 @@ class PokemonColoringPageCLI:
         )
 
         print_formatted_text(HTML(""))
-        print_formatted_text(HTML(f"Select {self._n_pokemon()} Pokémon to print."))
+        print_formatted_text(
+            HTML(
+                f"Select <{self.color_highlight}>{self._n_pokemon()}</{self.color_highlight}> Pokémon to print."
+            )
+        )
         print_formatted_text(HTML("Adding more will replace the last one."))
+        print_formatted_text(
+            HTML(
+                f"Commands start with <{self.color_highlight}>:</{self.color_highlight}>"
+            )
+        )
+        print_formatted_text(
+            HTML(
+                f"Press <{self.color_highlight}>Enter</{self.color_highlight}> to print the coloring page."
+            )
+        )
         print_formatted_text(HTML(""))
         print_formatted_text(
-            HTML("Selected Pokémon (<gray>auto</gray>/<green>manual</green>):")
+            HTML(
+                f"Selected Pokémon (<{self.color_unselected_pokemon}>auto</{self.color_unselected_pokemon}>/<{self.color_selected_pokemon}>manual</{self.color_selected_pokemon}>):"
+            )
         )
 
         cc = 0
