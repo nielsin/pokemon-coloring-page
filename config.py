@@ -7,8 +7,8 @@ POKEDEX_URL = (
 IMAGE_URL = "https://img.pokemondb.net/artwork/large"
 
 # Default sheet settings
-PAPER_WIDTH_MM = 297
-PAPER_HEIGHT_MM = 210
+PAGE_WIDTH_MM = 297
+PAGE_HEIGHT_MM = 210
 OUTER_MARGIN_MM = 10
 INNER_MARGIN_MM = 2
 FONT_SIZE_MM = 2
