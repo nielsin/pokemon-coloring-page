@@ -1,5 +1,6 @@
 import os
 import random
+import sys
 import textwrap
 from functools import wraps
 
@@ -155,6 +156,25 @@ class PokemonColoringPageCLI:
         ]
         for msg in msg_list:
             self.MESSAGES.append(HTML(msg))
+
+    @command("quit")
+    def _quit(self, _):
+        sys.exit()
+
+    @command("clear")
+    def _clear(self, _):
+        self.selected_pokemon = []
+        self.user_selected_pokemon = 0
+
+    @command("reset")
+    def _reset(self, _):
+        self.PAGE_WIDTH_MM = config.PAGE_WIDTH_MM
+        self.PAGE_HEIGHT_MM = config.PAGE_HEIGHT_MM
+        self.OUTER_MARGIN_MM = config.OUTER_MARGIN_MM
+        self.INNER_MARGIN_MM = config.INNER_MARGIN_MM
+        self.FONT_SIZE_MM = config.FONT_SIZE_MM
+        self.ROWS = config.ROWS
+        self.COLUMNS = config.COLUMNS
 
     @command("page_width")
     def _set_page_width(self, page_width: str):
@@ -349,7 +369,35 @@ class PokemonColoringPageCLI:
                 user_input = session.prompt("> ")
 
                 if not user_input:
-                    break
+                    print_formatted_text(
+                        HTML(
+                            f"<{self.color_highlight}>Generating coloring page...</{self.color_highlight}>"
+                        )
+                    )
+
+                    output_image, exclude_list = pokemon_print_sheet(
+                        include_list=[
+                            self.pokedex_name[pokemon]
+                            for pokemon in self.selected_pokemon
+                        ],
+                        exclude_list=[],
+                        rows=self.ROWS,
+                        columns=self.COLUMNS,
+                        page_width_mm=self.PAGE_WIDTH_MM,
+                        page_height_mm=self.PAGE_HEIGHT_MM,
+                        outer_margin_mm=self.OUTER_MARGIN_MM,
+                        inner_margin_mm=self.INNER_MARGIN_MM,
+                        font_size_mm=self.FONT_SIZE_MM,
+                    )
+                    output_image.show()
+
+                    self.MESSAGES.append(
+                        HTML(
+                            f"<{self.color_highlight}>Coloring page generated.</{self.color_highlight}>"
+                        )
+                    )
+
+                    continue
 
                 if user_input.startswith(":"):
                     command_name = user_input[1:].split(" ")[0]
@@ -386,20 +434,6 @@ class PokemonColoringPageCLI:
 
             except (KeyboardInterrupt, EOFError):
                 break
-
-        output_image, exclude_list = pokemon_print_sheet(
-            include_list=[
-                self.pokedex_name[pokemon] for pokemon in self.selected_pokemon
-            ],
-            rows=self.ROWS,
-            columns=self.COLUMNS,
-            page_width_mm=self.PAGE_WIDTH_MM,
-            page_height_mm=self.PAGE_HEIGHT_MM,
-            outer_margin_mm=self.OUTER_MARGIN_MM,
-            inner_margin_mm=self.INNER_MARGIN_MM,
-            font_size_mm=self.FONT_SIZE_MM,
-        )
-        output_image.show()
 
 
 if __name__ == "__main__":
