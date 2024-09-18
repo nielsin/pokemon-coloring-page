@@ -10,3 +10,13 @@ dependencies = [
     "prompt-toolkit>=3.0.47",
     "typer>=0.12.5",
 ]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=8.3.3",
+]
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests",
+]
