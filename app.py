@@ -1,5 +1,6 @@
 import os
 import random
+from functools import wraps
 
 import typer
 from prompt_toolkit import HTML, PromptSession, print_formatted_text
@@ -10,13 +11,32 @@ import config
 from utils import get_pokedex, pokemon_print_sheet
 
 
+def command(command_name: str):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            return func(*args, **kwargs)
+
+        wrapper.is_command = True
+        wrapper.command_name = command_name
+        return wrapper
+
+    return decorator
+
+
 class PokemonColoringPageCLI:
     """Class for the Pokémon Coloring Page CLI."""
 
-    def n_pokemon(self):
+    def __init__(self):
+        self.color_page_setup = "gray"
+        self.color_selected_pokemon = "green"
+        self.color_unselected_pokemon = "gray"
+        self.color_message = "red"
+
+    def _n_pokemon(self):
         return self.ROWS * self.COLUMNS
 
-    def get_page_description(self):
+    def _get_page_description(self):
         description = "Custom"
 
         # Find page size description
@@ -34,22 +54,237 @@ class PokemonColoringPageCLI:
 
         return description
 
+    def _random_select_pokemon(self):
+        # Add missing pokemon to list
+        while len(self.selected_pokemon) < self._n_pokemon():
+            new_pokemon = random.choice(list(self.pokedex_name.keys()))
+            if new_pokemon not in self.selected_pokemon:
+                self.selected_pokemon.append(new_pokemon)
+
+        # Remove pokemon if list is full
+        self.selected_pokemon = self.selected_pokemon[: self._n_pokemon()]
+
+        # Reduce user selected pokemon if needed
+        self.user_selected_pokemon = min(self.user_selected_pokemon, self._n_pokemon())
+
+    def _print_info(self, clear_screen: bool = True):
+        # Clear the screen
+        if clear_screen:
+            os.system("cls" if os.name == "nt" else "clear")
+
+        print_formatted_text(
+            HTML(
+                "<white>Pokémon </white><red>C</red><green>O</green><yellow>L</yellow><blue>O</blue><magenta>R</magenta><cyan>I</cyan><red>N</red><green>G</green><white> page CLI</white>"
+            )
+        )
+
+        # Print page setup
+        print_formatted_text(HTML(""))
+        print_formatted_text(
+            HTML(
+                f"<{self.color_page_setup}>Page size:\t{self.PAGE_WIDTH_MM}x{self.PAGE_HEIGHT_MM}mm ({self._get_page_description()})</{self.color_page_setup}>"
+            )
+        )
+        print_formatted_text(
+            HTML(
+                f"<{self.color_page_setup}>Outer margin:\t{self.OUTER_MARGIN_MM}mm</{self.color_page_setup}>"
+            )
+        )
+        print_formatted_text(
+            HTML(
+                f"<{self.color_page_setup}>Inner margin:\t{self.INNER_MARGIN_MM}mm</{self.color_page_setup}>"
+            )
+        )
+        print_formatted_text(
+            HTML(
+                f"<{self.color_page_setup}>Font size:\t{self.FONT_SIZE_MM}mm</{self.color_page_setup}>"
+            )
+        )
+        print_formatted_text(
+            HTML(
+                f"<{self.color_page_setup}>Grid:\t\t{self.COLUMNS}x{self.ROWS}</{self.color_page_setup}>"
+            )
+        )
+
+        print_formatted_text(HTML(""))
+        print_formatted_text(HTML(f"Select {self._n_pokemon()} Pokémon to print."))
+        print_formatted_text(HTML("Adding more will replace the last one."))
+        print_formatted_text(HTML(""))
+        print_formatted_text(
+            HTML("Selected Pokémon (<gray>auto</gray>/<green>manual</green>):")
+        )
+
+        cc = 0
+        for pokemon in self.selected_pokemon:
+            color = (
+                self.color_selected_pokemon
+                if cc < self.user_selected_pokemon
+                else self.color_unselected_pokemon
+            )
+            print_formatted_text(
+                HTML(
+                    f"<{color}> >> #{self.pokedex_name[pokemon]:<4} {pokemon}</{color}>"
+                )
+            )
+            cc += 1
+
+        # Print MESSAGES
+        for message in self.MESSAGES:
+            print_formatted_text(message)
+        self.MESSAGES = []
+
+    @command("page_width")
+    def _set_page_width(self, page_width: str):
+        try:
+            self.PAGE_WIDTH_MM = float(page_width)
+        except ValueError:
+            self.MESSAGES.append(
+                HTML(
+                    f"<{self.color_message}>Invalid page width. Please try again.</{self.color_message}>"
+                )
+            )
+
+    @command("page_height")
+    def _set_page_height(self, page_height: str):
+        try:
+            self.PAGE_HEIGHT_MM = float(page_height)
+        except ValueError:
+            self.MESSAGES.append(
+                HTML(
+                    f"<{self.color_message}>Invalid page height. Please try again.</{self.color_message}>"
+                )
+            )
+
+    @command("outer_margin")
+    def _set_outer_margin(self, outer_margin: str):
+        try:
+            self.OUTER_MARGIN_MM = float(outer_margin)
+        except ValueError:
+            self.MESSAGES.append(
+                HTML(
+                    f"<{self.color_message}>Invalid outer margin. Please try again.</{self.color_message}>"
+                )
+            )
+
+    @command("inner_margin")
+    def _set_inner_margin(self, inner_margin: str):
+        try:
+            self.INNER_MARGIN_MM = float(inner_margin)
+        except ValueError:
+            self.MESSAGES.append(
+                HTML(
+                    f"<{self.color_message}>Invalid inner margin. Please try again.</{self.color_message}>"
+                )
+            )
+
+    @command("font_size")
+    def _set_font_size(self, font_size: str):
+        try:
+            self.FONT_SIZE_MM = float(font_size)
+        except ValueError:
+            self.MESSAGES.append(
+                HTML(
+                    f"<{self.color_message}>Invalid font size. Please try again.</{self.color_message}>"
+                )
+            )
+
+    @command("rows")
+    def _set_rows(self, rows: str):
+        try:
+            self.ROWS = int(rows)
+        except ValueError:
+            self.MESSAGES.append(
+                HTML(
+                    f"<{self.color_message}>Invalid number of rows. Please try again.</{self.color_message}>"
+                )
+            )
+
+    @command("columns")
+    def _set_columns(self, columns: str):
+        try:
+            self.COLUMNS = int(columns)
+        except ValueError:
+            self.MESSAGES.append(
+                HTML(
+                    f"<{self.color_message}>Invalid number of columns. Please try again.</{self.color_message}>"
+                )
+            )
+
+    @command("rotate_page")
+    def _rotate_page(self, _):
+        self.PAGE_WIDTH_MM, self.PAGE_HEIGHT_MM = (
+            self.PAGE_HEIGHT_MM,
+            self.PAGE_WIDTH_MM,
+        )
+
+    @command("page_size")
+    def _set_page_size(self, page_size: str):
+        try:
+            orientation = page_size.split(" ")[-1]
+            page_size_name = " ".join(page_size.split(" ")[:-1])
+
+            width, height = config.STANDARD_PAGE_SIZES_MM[page_size_name]
+
+            if orientation == "Landscape":
+                width, height = height, width
+
+            self.PAGE_WIDTH_MM = width
+            self.PAGE_HEIGHT_MM = height
+
+        except KeyError:
+            self.MESSAGES.append(
+                HTML(
+                    f"<{self.color_message}>Invalid page size. Please try again.</{self.color_message}>"
+                )
+            )
+
+    def _get_commands(self):
+        commands = {}
+        for name in dir(self):
+            attr = getattr(self, name)
+            if callable(attr) and hasattr(attr, "is_command"):
+                commands[attr.command_name] = attr
+        return commands
+
+    def _create_prompt_session(self):
+        # Define a list of suggestions
+        suggestions = list(self.pokedex_name.keys())
+
+        # Add commands to suggestions
+        suggestions += [f":{command}" for command in self.commands.keys()]
+
+        # List page sizes
+        page_sizes = []
+        for page_size in config.STANDARD_PAGE_SIZES_MM.keys():
+            for orientation in ["Portrait", "Landscape"]:
+                page_sizes.append(f":page_size {page_size} {orientation}")
+
+        # Add page sizes to suggestions
+        suggestions += page_sizes
+
+        # Create a prompt session with FuzzyCompleter
+        word_completer = WordCompleter(suggestions)
+        fuzzy_completer = FuzzyCompleter(word_completer)
+        session = PromptSession(completer=fuzzy_completer)
+
+        return session
+
     def run(
         self,
         page_width: Annotated[
-            int, typer.Option(help="Page width in mm")
+            float, typer.Option(help="Page width in mm")
         ] = config.PAGE_WIDTH_MM,
         page_height: Annotated[
-            int, typer.Option(help="Page height in mm")
+            float, typer.Option(help="Page height in mm")
         ] = config.PAGE_HEIGHT_MM,
         outer_margin: Annotated[
-            int, typer.Option(help="Outer margin in mm")
+            float, typer.Option(help="Outer margin in mm")
         ] = config.OUTER_MARGIN_MM,
         inner_margin: Annotated[
-            int, typer.Option(help="Inner margin in mm")
+            float, typer.Option(help="Inner margin in mm")
         ] = config.INNER_MARGIN_MM,
         font_size: Annotated[
-            int, typer.Option(help="Font size in mm")
+            float, typer.Option(help="Font size in mm")
         ] = config.FONT_SIZE_MM,
         rows: Annotated[int, typer.Option(help="Number of rows")] = config.ROWS,
         columns: Annotated[
@@ -69,118 +304,70 @@ class PokemonColoringPageCLI:
         self.COLUMNS = columns
         self.MESSAGES = []
 
-        # Define a list of suggestions
-        pokedex, pokedex_name = get_pokedex()
-        suggestions = list(pokedex_name.keys())
+        # Initialize selected pokemon
+        self.selected_pokemon = []
+        self.user_selected_pokemon = 0
 
-        # Create a prompt session with FuzzyCompleter
-        word_completer = WordCompleter(suggestions)
-        fuzzy_completer = FuzzyCompleter(word_completer)
-        session = PromptSession(completer=fuzzy_completer)
+        # Get commands
+        self.commands = self._get_commands()
 
-        # Some variables
-        selected_pokemon = []
-        user_selected_pokemon = 0
+        # Get pokedex
+        self.pokedex, self.pokedex_name = get_pokedex()
+
+        # Create a prompt session
+        session = self._create_prompt_session()
 
         while True:
             try:
-                # Add missing pokemon to list
-                while len(selected_pokemon) < self.n_pokemon():
-                    new_pokemon = random.choice(list(pokedex_name.keys()))
-                    if new_pokemon not in selected_pokemon:
-                        selected_pokemon.append(new_pokemon)
+                self._random_select_pokemon()
 
-                # Remove pokemon if list is full
-                selected_pokemon = selected_pokemon[: self.n_pokemon()]
-
-                # Clear the screen
-                os.system("cls" if os.name == "nt" else "clear")
-
-                print_formatted_text(
-                    HTML(
-                        "<white>Pokémon </white><red>C</red><green>O</green><yellow>L</yellow><blue>O</blue><magenta>R</magenta><cyan>I</cyan><red>N</red><green>G</green><white> page CLI</white>"
-                    )
-                )
-
-                # Print page setup
-                page_setup_color = "gray"
-                print_formatted_text(HTML(""))
-                print_formatted_text(
-                    HTML(
-                        f"<{page_setup_color}>Page size:\t{self.PAGE_WIDTH_MM}x{self.PAGE_HEIGHT_MM}mm ({self.get_page_description()})</{page_setup_color}>"
-                    )
-                )
-                print_formatted_text(
-                    HTML(
-                        f"<{page_setup_color}>Outer margin:\t{self.OUTER_MARGIN_MM}mm</{page_setup_color}>"
-                    )
-                )
-                print_formatted_text(
-                    HTML(
-                        f"<{page_setup_color}>Inner margin:\t{self.INNER_MARGIN_MM}mm</{page_setup_color}>"
-                    )
-                )
-                print_formatted_text(
-                    HTML(
-                        f"<{page_setup_color}>Font size:\t{self.FONT_SIZE_MM}mm</{page_setup_color}>"
-                    )
-                )
-                print_formatted_text(
-                    HTML(
-                        f"<{page_setup_color}>Grid:\t\t{self.COLUMNS}x{self.ROWS}</{page_setup_color}>"
-                    )
-                )
-
-                print_formatted_text(HTML(""))
-                print_formatted_text(
-                    HTML(f"Select {self.n_pokemon()} Pokémon to print.")
-                )
-                print_formatted_text(HTML("Adding more will replace the last one."))
-                print_formatted_text(HTML(""))
-                print_formatted_text(
-                    HTML("Selected Pokémon (<gray>auto</gray>/<green>manual</green>):")
-                )
-
-                cc = 0
-                for pokemon in selected_pokemon:
-                    color = "green" if cc < user_selected_pokemon else "gray"
-                    print_formatted_text(
-                        HTML(
-                            f"<{color}> >> #{pokedex_name[pokemon]:<4} {pokemon}</{color}>"
-                        )
-                    )
-                    cc += 1
-
-                # Print MESSAGES
-                for message in self.MESSAGES:
-                    print_formatted_text(message)
-                self.MESSAGES = []
+                self._print_info()
 
                 user_input = session.prompt("> ")
 
                 if not user_input:
                     break
 
-                if user_input not in pokedex_name.keys():
+                if user_input.startswith(":"):
+                    command_name = user_input[1:].split(" ")[0]
+                    command_args = user_input[1 + len(command_name) :].strip()
+
+                    if command_name in self.commands:
+                        self.commands[command_name](command_args)
+                    else:
+                        self.MESSAGES.append(
+                            HTML(
+                                f"<{self.color_message}>Invalid command. Please try again.</{self.color_message}>"
+                            )
+                        )
+                    continue
+
+                if user_input not in self.pokedex_name.keys():
                     self.MESSAGES.append(
-                        HTML("<red>Invalid input. Please try again.</red>")
+                        HTML(
+                            f"<{self.color_message}>Invalid input. Please try again.</{self.color_message}>"
+                        )
                     )
                     continue
 
-                if user_input in selected_pokemon:
+                if user_input in self.selected_pokemon:
                     self.MESSAGES.append(
-                        HTML("<red>Pokemon already selected. Please try again.</red>")
+                        HTML(
+                            f"<{self.color_message}>Pokemon already selected. Please try again.</{self.color_message}>"
+                        )
                     )
                     continue
 
-                selected_pokemon.insert(0, user_input)
-                user_selected_pokemon += 1
+                self.selected_pokemon.insert(0, user_input)
+                self.user_selected_pokemon += 1
 
             except (KeyboardInterrupt, EOFError):
                 break
 
         output_image, exclude_list = pokemon_print_sheet(
-            include_list=[pokedex_name[pokemon] for pokemon in selected_pokemon],
+            include_list=[
+                self.pokedex_name[pokemon] for pokemon in self.selected_pokemon
+            ],
             rows=self.ROWS,
             columns=self.COLUMNS,
             page_width_mm=self.PAGE_WIDTH_MM,
