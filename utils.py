@@ -4,7 +4,7 @@ from io import BytesIO
 from typing import Any, Dict, Tuple
 
 import httpx
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter, ImageOps
 
 import config
 
@@ -94,6 +94,12 @@ def create_coloring_page(image: Image, noise_threshold: float = 0.95) -> Image:
     image_contour = image_smooth.filter(ImageFilter.CONTOUR)
     # Remove noise
     image_clean = image_contour.point(lambda p: 255 if p > 255 * noise_threshold else p)
+
+    # Remove white borders from image
+    inverted_image = ImageOps.invert(image_clean)
+    bbox = inverted_image.getbbox()
+    if bbox:
+        image_clean = image_clean.crop(bbox)
 
     return image_clean
 
