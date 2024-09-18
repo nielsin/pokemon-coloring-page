@@ -1,5 +1,6 @@
 import os
 import random
+import textwrap
 from functools import wraps
 
 import typer
@@ -106,25 +107,14 @@ class PokemonColoringPageCLI:
                 f"<{self.color_page_setup}>Grid:\t\t{self.COLUMNS}x{self.ROWS}</{self.color_page_setup}>"
             )
         )
+        print_formatted_text(HTML(""))
+        print_formatted_text(
+            HTML(
+                f"Use <{self.color_highlight}>:help</{self.color_highlight}> command for help."
+            )
+        )
+        print_formatted_text(HTML(""))
 
-        print_formatted_text(HTML(""))
-        print_formatted_text(
-            HTML(
-                f"Select <{self.color_highlight}>{self._n_pokemon()}</{self.color_highlight}> Pokémon to print."
-            )
-        )
-        print_formatted_text(HTML("Adding more will replace the last one."))
-        print_formatted_text(
-            HTML(
-                f"Commands start with <{self.color_highlight}>:</{self.color_highlight}>"
-            )
-        )
-        print_formatted_text(
-            HTML(
-                f"Press <{self.color_highlight}>Enter</{self.color_highlight}> to print the coloring page."
-            )
-        )
-        print_formatted_text(HTML(""))
         print_formatted_text(
             HTML(
                 f"Selected Pokémon (<{self.color_unselected_pokemon}>auto</{self.color_unselected_pokemon}>/<{self.color_selected_pokemon}>manual</{self.color_selected_pokemon}>):"
@@ -149,6 +139,22 @@ class PokemonColoringPageCLI:
         for message in self.MESSAGES:
             print_formatted_text(message)
         self.MESSAGES = []
+
+    @command("help")
+    def _help(self, _):
+        msg_list = [
+            "",
+            textwrap.dedent(f"""\
+            The list of Pokémon is randomly selected. You can replace them by selecting more.
+            Select <{self.color_highlight}>{self._n_pokemon()}</{self.color_highlight}> Pokémon to print by typing their names. Adding more will replace the last one.
+            Commands start with <{self.color_highlight}>:</{self.color_highlight}> and you can use them to customize the page setup.
+            Available commands:"""),
+            "\t" + "\n\t".join([f":{command}" for command in self.commands.keys()]),
+            f"Press <{self.color_highlight}>Enter</{self.color_highlight}> with empty prompt to generate the coloring page.",
+            "",
+        ]
+        for msg in msg_list:
+            self.MESSAGES.append(HTML(msg))
 
     @command("page_width")
     def _set_page_width(self, page_width: str):
