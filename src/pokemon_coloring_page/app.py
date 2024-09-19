@@ -246,6 +246,10 @@ class PokemonColoringPageCLI:
             self.PAGE_WIDTH_MM,
         )
 
+    @command("grid_orientation", command_help="Switch grid orientation (transpose)")
+    def _rotate_grid(self, _):
+        self.ROWS, self.COLUMNS = self.COLUMNS, self.ROWS
+
     @command(
         "page_size",
         command_arg_desc="size orientation",
