@@ -427,8 +427,3 @@ class PokemonColoringPageCLI:
 def main():
     app = PokemonColoringPageCLI()
     typer.run(app.run)
-
-
-if __name__ == "__main__":
-    app = PokemonColoringPageCLI()
-    typer.run(app.run)
