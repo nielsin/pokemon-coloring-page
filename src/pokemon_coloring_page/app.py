@@ -98,7 +98,7 @@ class PokemonColoringPageCLI:
         for line in [
             "<white>Pokémon </white><red>C</red><green>O</green><yellow>L</yellow><blue>O</blue><magenta>R</magenta><cyan>I</cyan><red>N</red><green>G</green><white> page CLI</white>",
             "",
-            f"<{self.color_page_setup}>Page size:\t{self.PAGE_WIDTH_MM}x{self.PAGE_HEIGHT_MM}mm ({self._get_page_description()})</{self.color_page_setup}>"
+            f"<{self.color_page_setup}>Page size:\t{self.PAGE_WIDTH_MM}x{self.PAGE_HEIGHT_MM}mm ({self._get_page_description()})</{self.color_page_setup}>",
             f"<{self.color_page_setup}>Outer margin:\t{self.OUTER_MARGIN_MM}mm</{self.color_page_setup}>",
             f"<{self.color_page_setup}>Inner margin:\t{self.INNER_MARGIN_MM}mm</{self.color_page_setup}>",
             f"<{self.color_page_setup}>Font size:\t{self.FONT_SIZE_MM}mm</{self.color_page_setup}>",
@@ -157,11 +157,14 @@ class PokemonColoringPageCLI:
         for msg in msg_list:
             self._add_message(msg, custom_colors=True)
 
-    @command("quit", command_help="Quit the CLI")
+    @command("quit", command_help="Quit the CLI app")
     def _quit(self, _):
         sys.exit()
 
-    @command("clear_selection", command_help="Clear Pokémon selection")
+    @command(
+        "reset_selection",
+        command_help="Clear selection and reselect random Pokémon",
+    )
     def _clear(self, _):
         self.selected_pokemon = []
         self.user_selected_pokemon = 0
@@ -233,7 +236,10 @@ class PokemonColoringPageCLI:
         except ValueError:
             self._add_message("Invalid number of columns. Please try again.")
 
-    @command("rotate_page", command_help="Rotate page")
+    @command(
+        "page_orientation",
+        command_help="Switch page orientation between portrait and landscape",
+    )
     def _rotate_page(self, _):
         self.PAGE_WIDTH_MM, self.PAGE_HEIGHT_MM = (
             self.PAGE_HEIGHT_MM,
@@ -243,7 +249,7 @@ class PokemonColoringPageCLI:
     @command(
         "page_size",
         command_arg_desc="size orientation",
-        command_help="Set a standard page size",
+        command_help="Set a standard page size and orientation",
     )
     def _set_page_size(self, page_size: str):
         try:
