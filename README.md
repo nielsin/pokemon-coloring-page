@@ -18,4 +18,4 @@ To install the CLI use `uv tool install`
 
     uv tool install --from git+https://github.com/nielsin/pokemon-coloring-page/ pokemon-coloring-page
 
-For more information on how to use the CLI, run `uv pokemon-coloring-page --help` or use the `:help` command inside the CLI app.
+For more information on how to use the CLI, run `pokemon-coloring-page --help` or use the `:help` command inside the CLI app.
