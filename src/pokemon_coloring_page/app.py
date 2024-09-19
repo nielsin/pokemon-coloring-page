@@ -8,8 +8,8 @@ from prompt_toolkit import HTML, PromptSession, print_formatted_text
 from prompt_toolkit.completion import FuzzyCompleter, WordCompleter
 from typing_extensions import Annotated
 
-import config
-from utils import get_pokedex, pokemon_print_sheet
+from .config import Config as config
+from .utils import get_pokedex, pokemon_print_sheet
 
 
 def command(
@@ -416,6 +416,11 @@ class PokemonColoringPageCLI:
 
             except (KeyboardInterrupt, EOFError):
                 break
+
+
+def main():
+    app = PokemonColoringPageCLI()
+    typer.run(app.run)
 
 
 if __name__ == "__main__":

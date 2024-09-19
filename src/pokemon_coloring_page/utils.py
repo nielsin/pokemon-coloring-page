@@ -6,7 +6,7 @@ from typing import Any, Dict, Tuple
 import httpx
 from PIL import Image, ImageDraw, ImageFilter, ImageOps
 
-import config
+from .config import Config as config
 
 
 @cache
