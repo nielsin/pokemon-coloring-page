@@ -9,7 +9,7 @@ from prompt_toolkit.completion import FuzzyCompleter, WordCompleter
 from typing_extensions import Annotated
 
 from .config import Config as config
-from .utils import get_pokedex, pokemon_print_sheet
+from .utils import get_pokedex, pokemon_id2name, pokemon_name2id, pokemon_print_sheet
 
 
 def command(
@@ -79,7 +79,7 @@ class PokemonColoringPageCLI:
     def _random_select_pokemon(self):
         # Add missing pokemon to list
         while len(self.selected_pokemon) < self._n_pokemon():
-            new_pokemon = random.choice(list(self.pokedex_name.keys()))
+            new_pokemon = random.choice(list(self.pokedex.keys()))
             if new_pokemon not in self.selected_pokemon:
                 self.selected_pokemon.append(new_pokemon)
 
@@ -112,7 +112,7 @@ class PokemonColoringPageCLI:
 
         # Print selected pokemon
         cc = 0
-        for pokemon in self.selected_pokemon:
+        for pokemon_id in self.selected_pokemon:
             color = (
                 self.color_selected_pokemon
                 if cc < self.user_selected_pokemon
@@ -120,7 +120,7 @@ class PokemonColoringPageCLI:
             )
             print_formatted_text(
                 HTML(
-                    f"<{color}> >> #{self.pokedex_name[pokemon]:<4} {pokemon}</{color}>"
+                    f"<{color}> >> #{pokemon_id:<4} {pokemon_id2name(pokemon_id)}</{color}>"
                 )
             )
             cc += 1
@@ -144,9 +144,8 @@ class PokemonColoringPageCLI:
         msg_list = [
             "",
             "The initial list of Pokémon is randomly selected.",
-            "You can select others by typing in their names.",
+            "You can select others by typing in their name or id.",
             "Adding Pokémon will remove the last Pokémon in the list.",
-            "Selection is case sensitive, so use autocomplete.",
             "",
             "Available commands:",
             "\n".join(command_desc),
@@ -285,7 +284,7 @@ class PokemonColoringPageCLI:
 
     def _create_prompt_session(self):
         # Define a list of suggestions
-        suggestions = list(self.pokedex_name.keys())
+        suggestions = list(self.pokedex.values())
 
         # Add commands to suggestions
         suggestions += [f":{command}" for command in self.commands.keys()]
@@ -359,7 +358,7 @@ class PokemonColoringPageCLI:
         self.commands = self._get_commands()
 
         # Get pokedex
-        self.pokedex, self.pokedex_name = get_pokedex()
+        self.pokedex = get_pokedex()
 
         # Create a prompt session
         session = self._create_prompt_session()
@@ -381,10 +380,7 @@ class PokemonColoringPageCLI:
                     )
 
                     output_image, exclude_list = pokemon_print_sheet(
-                        include_list=[
-                            self.pokedex_name[pokemon]
-                            for pokemon in self.selected_pokemon
-                        ],
+                        include_list=self.selected_pokemon,
                         exclude_list=[],
                         rows=self.ROWS,
                         columns=self.COLUMNS,
@@ -413,15 +409,27 @@ class PokemonColoringPageCLI:
                         self._add_message("Invalid command. Please try again.")
                     continue
 
-                if user_input not in self.pokedex_name.keys():
+                pokemon_id = pokemon_name2id(user_input)
+
+                if not pokemon_id:
+                    try:
+                        pokemon_id = int(user_input)
+                    except ValueError:
+                        pass
+
+                if pokemon_id not in self.pokedex.keys():
+                    self._add_message("Pokémon not found. Please try again.")
+                    continue
+
+                if not pokemon_id:
                     self._add_message("Invalid input. Please try again.")
                     continue
 
-                if user_input in self.selected_pokemon:
+                if pokemon_id in self.selected_pokemon:
                     self._add_message("Pokémon already selected. Please try again.")
                     continue
 
-                self.selected_pokemon.insert(0, user_input)
+                self.selected_pokemon.insert(0, pokemon_id)
                 self.user_selected_pokemon += 1
 
             except (KeyboardInterrupt, EOFError):

@@ -1,9 +1,6 @@
 class Config:
     # Pokédex
-    POKEDEX_URL = "https://raw.githubusercontent.com/Purukitto/pokemon-data.json/master/pokedex.json"
-
-    # Images
-    IMAGE_URL = "https://img.pokemondb.net/artwork/large"
+    POKEDEX_URL = "https://pokeapi.co/api/v2/pokedex/1"
 
     # Default sheet settings
     PAGE_WIDTH_MM = 297
