@@ -320,7 +320,7 @@ def pokemon_print_sheet(
             draw = ImageDraw.Draw(output_image)
             draw.text(
                 (x + INNER_MARGIN, y + INNER_MARGIN),
-                f"#{pokemon_id} - {pokemon_name}",
+                f"#{pokemon_id} - {pokemon_name}\n{'\n'.join([t for t in pokemon_id2types(pokemon_id)])}",
                 fill="black",
                 font_size=FONT_SIZE,
             )

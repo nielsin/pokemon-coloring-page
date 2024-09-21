@@ -443,7 +443,7 @@ class PokemonColoringPageCLI:
                     )
 
                     output_image, exclude_list = pokemon_print_sheet(
-                        include_list=self.selected_pokemon,
+                        include_list=self.selected_pokemon.copy(),
                         exclude_list=[],
                         rows=self.ROWS,
                         columns=self.COLUMNS,
