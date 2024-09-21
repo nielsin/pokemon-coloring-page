@@ -2,7 +2,7 @@ import random
 from functools import cache
 from io import BytesIO
 from string import capwords
-from typing import Dict, Tuple
+from typing import Tuple
 
 import httpx
 import pokebase as pb
@@ -12,20 +12,50 @@ from .config import Config as config
 
 
 @cache
-def get_pokedex() -> Dict[str, int]:
-    """
-    Retrieves the Pokedex data and returns it as a dict.
-    """
+def get_types():
+    url = f"{config.POKEAPI_URL}type"
 
-    url = config.POKEDEX_URL
-    response = httpx.get(url)
+    types = {}
 
-    pokedex = {
-        pokemon["entry_number"]: pokemon["pokemon_species"]["name"]
-        for pokemon in response.json()["pokemon_entries"]
-    }
+    with httpx.Client() as client:
+        response = client.get(url)
+        results = response.json()["results"]
+        for type in [client.get(type["url"]).json() for type in results]:
+            types[type["name"]] = []
+            for pokemon in type["pokemon"]:
+                name = pokemon["pokemon"]["name"]
+                id = int(pokemon["pokemon"]["url"].split("/")[-2])
+                types[type["name"]].append({"name": name, "id": id})
 
-    return {k: capwords(v) for k, v in pokedex.items()}
+    return types
+
+
+@cache
+def get_pokedex_types():
+    pokedex = {}
+    for type, pokemon_list in get_types().items():
+        for pokemon in pokemon_list:
+            if pokemon["id"] not in pokedex:
+                pokedex[pokemon["id"]] = {
+                    "name": capwords(pokemon["name"]),
+                    "types": [capwords(type)],
+                }
+            else:
+                pokedex[pokemon["id"]]["types"].append(capwords(type))
+    return pokedex
+
+
+@cache
+def get_pokedex(type_filter: str = None):
+    if type_filter:
+        if type_filter.lower() in [t.lower() for t in get_types().keys()]:
+            filter_str = capwords(type_filter)
+            return {
+                k: v["name"]
+                for k, v in get_pokedex_types().items()
+                if filter_str in v["types"]
+            }
+    return {k: v["name"] for k, v in get_pokedex_types().items()}
 
 
 @cache
@@ -59,6 +89,20 @@ def pokemon_name2id(pokemon_name: str) -> int:
     """
 
     return _pokedex_lowercase().get(pokemon_name.lower(), None)
+
+
+def pokemon_id2types(pokemon_id: int) -> list:
+    """
+    Retrieves the types of a Pokemon based on its ID.
+
+    Args:
+        pokemon_id (int): The ID of the Pokemon.
+
+    Returns:
+        list: The types of the Pokemon.
+    """
+
+    return get_pokedex_types().get(pokemon_id, {}).get("types", [])
 
 
 @cache

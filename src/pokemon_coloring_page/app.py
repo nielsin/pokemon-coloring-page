@@ -9,7 +9,14 @@ from prompt_toolkit.completion import FuzzyCompleter, WordCompleter
 from typing_extensions import Annotated
 
 from .config import Config as config
-from .utils import get_pokedex, pokemon_id2name, pokemon_name2id, pokemon_print_sheet
+from .utils import (
+    get_pokedex,
+    get_types,
+    pokemon_id2name,
+    pokemon_id2types,
+    pokemon_name2id,
+    pokemon_print_sheet,
+)
 
 
 def command(
@@ -112,6 +119,12 @@ class PokemonColoringPageCLI:
 
         # Print selected pokemon
         cc = 0
+
+        len_name = max(
+            [len(pokemon_id2name(pokemon_id)) for pokemon_id in self.selected_pokemon]
+        )
+        len_id = max([len(str(pokemon_id)) for pokemon_id in self.selected_pokemon])
+
         for pokemon_id in self.selected_pokemon:
             color = (
                 self.color_selected_pokemon
@@ -120,10 +133,18 @@ class PokemonColoringPageCLI:
             )
             print_formatted_text(
                 HTML(
-                    f"<{color}> >> #{pokemon_id:<4} {pokemon_id2name(pokemon_id)}</{color}>"
+                    f"<{color}> >> #{pokemon_id:<{len_id}} {pokemon_id2name(pokemon_id):<{len_name}} [{' ,'.join(pokemon_id2types(pokemon_id))}]</{color}>"
                 )
             )
             cc += 1
+
+        # Filter
+        if self.FILTER:
+            print_formatted_text(
+                HTML(
+                    f"<{self.color_highlight}>Filter: {self.FILTER}</{self.color_highlight}>"
+                )
+            )
 
     @command("help", command_help="Show help")
     def _help(self, _):
@@ -270,6 +291,44 @@ class PokemonColoringPageCLI:
         except KeyError:
             self._add_message("Invalid page size. Please try again.")
 
+    @command("types", command_help="List all Pokémon types and their count")
+    def _list_types(self, _):
+        for type, pokemon in get_types().items():
+            self._add_message(f"{type.capitalize()} ({len(pokemon)})")
+
+    @command(
+        "type_filter",
+        command_help="Only Pokémon with specific type. No argument to reset.",
+    )
+    def _type_filter(self, type_filter: str):
+        self.FILTER = None
+
+        if type_filter == "":
+            self.pokedex = get_pokedex()
+            self._create_prompt_session()
+            return
+
+        if type_filter.lower() not in [t.lower() for t in get_types().keys()]:
+            self._add_message("Invalid type. Please try again.")
+            return
+
+        if len(get_types()[type_filter.lower()]) < self._n_pokemon():
+            self._add_message(
+                f"Not enough Pokémon with type: {type_filter}. Please try again."
+            )
+            return
+
+        self.FILTER = type_filter.capitalize()
+
+        self.selected_pokemon = [
+            pokemon_id
+            for pokemon_id in self.selected_pokemon
+            if type_filter.lower() in [t.lower() for t in pokemon_id2types(pokemon_id)]
+        ]
+
+        self.pokedex = get_pokedex(type_filter=type_filter)
+        self._create_prompt_session()
+
     def _get_commands(self):
         commands = {}
         for name in dir(self):
@@ -295,15 +354,18 @@ class PokemonColoringPageCLI:
             for orientation in ["Portrait", "Landscape"]:
                 page_sizes.append(f":page_size {page_size} {orientation}")
 
+        # List types
+        suggestions += [
+            f":type_filter {type.capitalize()}" for type in get_types().keys()
+        ]
+
         # Add page sizes to suggestions
         suggestions += page_sizes
 
         # Create a prompt session with FuzzyCompleter
         word_completer = WordCompleter(suggestions)
         fuzzy_completer = FuzzyCompleter(word_completer)
-        session = PromptSession(completer=fuzzy_completer)
-
-        return session
+        self.session = PromptSession(completer=fuzzy_completer)
 
     def run(
         self,
@@ -349,6 +411,7 @@ class PokemonColoringPageCLI:
         self.ROWS = rows
         self.COLUMNS = columns
         self.MESSAGES = []
+        self.FILTER = None
 
         # Initialize selected pokemon
         self.selected_pokemon = []
@@ -361,7 +424,7 @@ class PokemonColoringPageCLI:
         self.pokedex = get_pokedex()
 
         # Create a prompt session
-        session = self._create_prompt_session()
+        self._create_prompt_session()
 
         while True:
             try:
@@ -370,7 +433,7 @@ class PokemonColoringPageCLI:
                 self._print_info()
                 self._print_messages()
 
-                user_input = session.prompt("> ")
+                user_input = self.session.prompt("> ")
 
                 if not user_input:
                     print_formatted_text(

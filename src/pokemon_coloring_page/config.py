@@ -1,6 +1,6 @@
 class Config:
     # Pokédex
-    POKEDEX_URL = "https://pokeapi.co/api/v2/pokedex/1"
+    POKEAPI_URL = "https://pokeapi.co/api/v2/"
 
     # Default sheet settings
     PAGE_WIDTH_MM = 297
