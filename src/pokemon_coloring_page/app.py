@@ -171,7 +171,8 @@ class PokemonColoringPageCLI:
             "Available commands:",
             "\n".join(command_desc),
             "",
-            f"Press <{self.color_highlight}>Enter</{self.color_highlight}> with empty prompt to generate the coloring page.",
+            f"Press <{self.color_highlight}>Enter</{self.color_highlight}> with empty prompt to generate coloring page and open in preview window.",
+            f"Use <{self.color_highlight}>:save</{self.color_highlight}> to genereate coloring page and save directly to file.",
             "",
         ]
         for msg in msg_list:
@@ -328,6 +329,33 @@ class PokemonColoringPageCLI:
 
         self.pokedex = get_pokedex(type_filter=type_filter)
         self._create_prompt_session()
+
+    @command(
+        "save",
+        command_help="Save the current coloring page to a file",
+        command_arg_desc="filename",
+    )
+    def _save(self, filename: str):
+        if not filename:
+            filename = "pokemon-coloring-page.png"
+
+        output_image, exclude_list = pokemon_print_sheet(
+            include_list=self.selected_pokemon.copy(),
+            exclude_list=[],
+            rows=self.ROWS,
+            columns=self.COLUMNS,
+            page_width_mm=self.PAGE_WIDTH_MM,
+            page_height_mm=self.PAGE_HEIGHT_MM,
+            outer_margin_mm=self.OUTER_MARGIN_MM,
+            inner_margin_mm=self.INNER_MARGIN_MM,
+            font_size_mm=self.FONT_SIZE_MM,
+        )
+        output_image.save(filename)
+
+        self._add_message(
+            f"Coloring page saved to <{self.color_highlight}>{filename}</{self.color_highlight}>",
+            custom_colors=True,
+        )
 
     def _get_commands(self):
         commands = {}

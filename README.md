@@ -1,5 +1,6 @@
 # pokémon-coloring-page
 A simple coloring page genrator for Pokémon. Creates a page with multiple Pokémon to color in.
+![coling page example](pokemon-coloring-page.png)
 
 ## Data sources
 Data is fetched from the [PokéAPI](https://pokeapi.co/).
