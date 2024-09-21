@@ -1,30 +1,108 @@
 import random
 from functools import cache
 from io import BytesIO
-from typing import Any, Dict, Tuple
+from string import capwords
+from typing import Tuple
 
 import httpx
+import pokebase as pb
 from PIL import Image, ImageDraw, ImageFilter, ImageOps
 
 from .config import Config as config
 
 
 @cache
-def get_pokedex() -> Tuple[Dict[int, Dict[str, Any]], Dict[str, int]]:
+def get_types():
+    url = f"{config.POKEAPI_URL}type"
+
+    types = {}
+
+    with httpx.Client() as client:
+        response = client.get(url)
+        results = response.json()["results"]
+        for type in [client.get(type["url"]).json() for type in results]:
+            types[type["name"]] = []
+            for pokemon in type["pokemon"]:
+                name = pokemon["pokemon"]["name"]
+                id = int(pokemon["pokemon"]["url"].split("/")[-2])
+                types[type["name"]].append({"name": name, "id": id})
+
+    return types
+
+
+@cache
+def get_pokedex_types():
+    pokedex = {}
+    for type, pokemon_list in get_types().items():
+        for pokemon in pokemon_list:
+            if pokemon["id"] not in pokedex:
+                pokedex[pokemon["id"]] = {
+                    "name": capwords(pokemon["name"]),
+                    "types": [capwords(type)],
+                }
+            else:
+                pokedex[pokemon["id"]]["types"].append(capwords(type))
+    return pokedex
+
+
+@cache
+def get_pokedex(type_filter: str = None):
+    if type_filter:
+        if type_filter.lower() in [t.lower() for t in get_types().keys()]:
+            filter_str = capwords(type_filter)
+            return {
+                k: v["name"]
+                for k, v in get_pokedex_types().items()
+                if filter_str in v["types"]
+            }
+    return {k: v["name"] for k, v in get_pokedex_types().items()}
+
+
+@cache
+def _pokedex_lowercase():
+    return {v.lower(): k for k, v in get_pokedex().items()}
+
+
+def pokemon_id2name(pokemon_id: int) -> str:
     """
-    Retrieves the Pokedex data and returns it as a tuple.
+    Converts a Pokemon ID to its name.
+
+    Args:
+        pokemon_id (int): The ID of the Pokemon.
 
     Returns:
-        A tuple containing two dictionaries:
-        - The first dictionary maps Pokemon IDs to their corresponding data.
-        - The second dictionary maps English Pokemon names to their corresponding IDs.
+        str: The name of the Pokemon.
     """
 
-    url = config.POKEDEX_URL
-    pokedex_data = httpx.get(url).json()
-    pokedex = {pokemon["id"]: pokemon for pokemon in pokedex_data}
-    pokedex_name = {pokemon["name"]["english"]: id for id, pokemon in pokedex.items()}
-    return pokedex, pokedex_name
+    return get_pokedex().get(pokemon_id, None)
+
+
+def pokemon_name2id(pokemon_name: str) -> int:
+    """
+    Converts a Pokemon name to its ID.
+
+    Args:
+        pokemon_name (str): The name of the Pokemon.
+
+    Returns:
+        int: The ID of the Pokemon.
+    """
+
+    return _pokedex_lowercase().get(pokemon_name.lower(), None)
+
+
+def pokemon_id2types(pokemon_id: int) -> list:
+    """
+    Retrieves the types of a Pokemon based on its ID.
+
+    Args:
+        pokemon_id (int): The ID of the Pokemon.
+
+    Returns:
+        list: The types of the Pokemon.
+    """
+
+    return get_pokedex_types().get(pokemon_id, {}).get("types", [])
 
 
 @cache
@@ -39,21 +117,9 @@ def get_image_by_id(pokemon_id: int) -> Image.Image:
         Image: The image of the Pokemon.
     """
 
-    pokemon_name = get_pokedex()[0][pokemon_id]["name"]["english"]
-    pokemon_name = (
-        pokemon_name.lower().replace(" ", "-").replace(".", "").replace("'", "")
-    )
-    img_url = f"{config.IMAGE_URL}/{pokemon_name}.jpg"
+    im = pb.SpriteResource("pokemon", pokemon_id, other=True, official_artwork=True)
 
-    # Get image and check response status
-    response = httpx.get(img_url)
-
-    if response.status_code != 200:
-        print("Warning: Image not found. Trying another source.")
-        img_url = get_pokedex()[0][pokemon_id]["image"]["hires"]
-        response = httpx.get(img_url)
-
-    return Image.open(BytesIO(response.content))
+    return Image.open(BytesIO(im.img_data))
 
 
 def get_image_by_name(pokemon_name: str) -> Image.Image:
@@ -67,7 +133,7 @@ def get_image_by_name(pokemon_name: str) -> Image.Image:
         Image: The image of the Pokemon.
     """
 
-    pokemon_id = get_pokedex()[1][pokemon_name]
+    pokemon_id = pokemon_name2id(pokemon_name)
     return get_image_by_id(pokemon_id)
 
 
@@ -122,14 +188,13 @@ def pokemon_coloring_page(
     """
 
     if pokemon_name:
-        pokemon_id = get_pokedex()[1][pokemon_name]
+        pokemon_id = pokemon_name2id(pokemon_name)
     elif pokemon_id:
-        pokemon_name = get_pokedex()[0][pokemon_id]["name"]["english"]
+        pokemon_name = pokemon_id2name(pokemon_id)
     else:
         # Get random pokemon
-        pokedex, pokedex_name = get_pokedex()
-        pokemon_id = random.choice(list(pokedex.keys()))
-        pokemon_name = pokedex[pokemon_id]["name"]["english"]
+        pokemon_id = random.choice(list(get_pokedex().keys()))
+        pokemon_name = pokemon_id2name(pokemon_id)
 
     image = get_image_by_id(pokemon_id)
     coloring_page = create_coloring_page(image)

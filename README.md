@@ -2,10 +2,7 @@
 A simple coloring page genrator for Pokémon. Creates a page with multiple Pokémon to color in.
 
 ## Data sources
-| Name | Type | URL |
-|---|---|---|
-| Pokémon Database | Images | https://pokemondb.net/ |
-| pokemon-data.json | Pokedex | https://github.com/Purukitto/pokemon-data.json |
+Data is fetched from the [PokéAPI](https://pokeapi.co/).
 
 ## Usage
 It is recommended to use [uv](https://docs.astral.sh/uv/) for this project. There are other ways to run the project, but they are not documented here.
