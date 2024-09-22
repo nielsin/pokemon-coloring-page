@@ -2,6 +2,7 @@ import os
 import random
 import sys
 from functools import wraps
+from string import capwords
 
 import typer
 from prompt_toolkit import HTML, PromptSession, print_formatted_text
@@ -10,17 +11,20 @@ from typing_extensions import Annotated
 
 from .config import Config as config
 from .utils import (
+    generate_pokemon_coloring_page,
     get_pokedex,
     get_types,
     pokemon_id2name,
     pokemon_id2types,
     pokemon_name2id,
-    pokemon_print_sheet,
 )
 
 
 def command(
-    command_name: str = None, command_help: str = None, command_arg_desc: str = None
+    command_name: str = None,
+    command_help: str = None,
+    command_arg_desc: str = None,
+    command_short: str = None,
 ):
     def decorator(func):
         @wraps(func)
@@ -29,6 +33,7 @@ def command(
 
         wrapper.is_command = True
         wrapper.command_help = command_help
+        wrapper.command_short = command_short
         wrapper.command_arg_desc = command_arg_desc
         if command_name:
             wrapper.command_name = command_name
@@ -131,9 +136,11 @@ class PokemonColoringPageCLI:
                 if cc < self.user_selected_pokemon
                 else self.color_unselected_pokemon
             )
+            pokemon_name = capwords(pokemon_id2name(pokemon_id))
+            pokemon_types = capwords(", ".join(pokemon_id2types(pokemon_id)))
             print_formatted_text(
                 HTML(
-                    f"<{color}> >> #{pokemon_id:<{len_id}} {pokemon_id2name(pokemon_id):<{len_name}} [{' ,'.join(pokemon_id2types(pokemon_id))}]</{color}>"
+                    f"<{color}> >> #{pokemon_id:<{len_id}} {pokemon_name:<{len_name}} [{pokemon_types}]</{color}>"
                 )
             )
             cc += 1
@@ -142,11 +149,11 @@ class PokemonColoringPageCLI:
         if self.FILTER:
             print_formatted_text(
                 HTML(
-                    f"<{self.color_highlight}>Filter: {self.FILTER}</{self.color_highlight}>"
+                    f"<{self.color_highlight}>Filter: {capwords(self.FILTER)}</{self.color_highlight}>"
                 )
             )
 
-    @command("help", command_help="Show help")
+    @command("help", command_help="Show help", command_short="h")
     def _help(self, _):
         # Build command description
         command_desc = []
@@ -154,13 +161,21 @@ class PokemonColoringPageCLI:
             command_arg_desc = (
                 command_info["arg_desc"] if command_info["arg_desc"] else ""
             )
+            command_short = f":{command_info['short']}" if command_info["short"] else ""
+            command_short = f"<{self.color_selected_pokemon}>{command_short}</{self.color_selected_pokemon}>"
+
             c = f" <{self.color_selected_pokemon}>:{command_name}</{self.color_selected_pokemon}> <{self.color_unselected_pokemon}>{command_arg_desc}</{self.color_unselected_pokemon}>"
 
             command_help = command_info["help"] if command_info["help"] else ""
-            command_desc.append([c, command_help])
+            command_desc.append([c, command_help, command_short])
 
-        max_command_len = max([len(c) for c, i in command_desc])
-        command_desc = [f"{c:<{max_command_len}}  {i}" for c, i in command_desc]
+        max_command_len = max([len(c) for c, i, s in command_desc])
+        max_short_len = max([len(s) for c, i, s in command_desc])
+
+        command_desc = [
+            f"{c:<{max_command_len}} {s:<{max_short_len}}  {i}"
+            for c, i, s in command_desc
+        ]
 
         msg_list = [
             "",
@@ -178,7 +193,7 @@ class PokemonColoringPageCLI:
         for msg in msg_list:
             self._add_message(msg, custom_colors=True)
 
-    @command("quit", command_help="Quit the CLI app")
+    @command("quit", command_help="Quit the CLI app", command_short="q")
     def _quit(self, _):
         sys.exit()
 
@@ -243,14 +258,24 @@ class PokemonColoringPageCLI:
         except ValueError:
             self._add_message("Invalid font size. Please try again.")
 
-    @command("rows", command_arg_desc="number", command_help="Set number of rows")
+    @command(
+        "rows",
+        command_arg_desc="number",
+        command_help="Set number of rows",
+        command_short="r",
+    )
     def _set_rows(self, rows: str):
         try:
             self.ROWS = int(rows)
         except ValueError:
             self._add_message("Invalid number of rows. Please try again.")
 
-    @command("columns", command_arg_desc="number", command_help="Set number of columns")
+    @command(
+        "columns",
+        command_arg_desc="number",
+        command_help="Set number of columns",
+        command_short="c",
+    )
     def _set_columns(self, columns: str):
         try:
             self.COLUMNS = int(columns)
@@ -295,21 +320,22 @@ class PokemonColoringPageCLI:
     @command("types", command_help="List all Pokémon types and their count")
     def _list_types(self, _):
         for type, pokemon in get_types().items():
-            self._add_message(f"{type.capitalize()} ({len(pokemon)})")
+            self._add_message(f"{capwords(type)} ({len(pokemon)})")
 
     @command(
         "type_filter",
         command_help="Only Pokémon with specific type. No argument to reset.",
+        command_arg_desc="type",
     )
     def _type_filter(self, type_filter: str):
         self.FILTER = None
 
         if type_filter == "":
             self.pokedex = get_pokedex()
-            self._create_prompt_session()
+            self._add_prompt_suggestions()
             return
 
-        if type_filter.lower() not in [t.lower() for t in get_types().keys()]:
+        if type_filter.lower() not in get_types().keys():
             self._add_message("Invalid type. Please try again.")
             return
 
@@ -319,37 +345,32 @@ class PokemonColoringPageCLI:
             )
             return
 
-        self.FILTER = type_filter.capitalize()
+        self.FILTER = type_filter
+
+        for i in range(self.user_selected_pokemon):
+            if type_filter.lower() not in pokemon_id2types(self.selected_pokemon[i]):
+                self.user_selected_pokemon -= 1
 
         self.selected_pokemon = [
             pokemon_id
             for pokemon_id in self.selected_pokemon
-            if type_filter.lower() in [t.lower() for t in pokemon_id2types(pokemon_id)]
+            if type_filter.lower() in pokemon_id2types(pokemon_id)
         ]
 
         self.pokedex = get_pokedex(type_filter=type_filter)
-        self._create_prompt_session()
+        self._add_prompt_suggestions()
 
     @command(
-        "save",
+        "write",
         command_help="Save the current coloring page to a file",
         command_arg_desc="filename",
+        command_short="w",
     )
     def _save(self, filename: str):
         if not filename:
             filename = "pokemon-coloring-page.png"
 
-        output_image, exclude_list = pokemon_print_sheet(
-            include_list=self.selected_pokemon.copy(),
-            exclude_list=[],
-            rows=self.ROWS,
-            columns=self.COLUMNS,
-            page_width_mm=self.PAGE_WIDTH_MM,
-            page_height_mm=self.PAGE_HEIGHT_MM,
-            outer_margin_mm=self.OUTER_MARGIN_MM,
-            inner_margin_mm=self.INNER_MARGIN_MM,
-            font_size_mm=self.FONT_SIZE_MM,
-        )
+        output_image = self._generate_coloring_page()
         output_image.save(filename)
 
         self._add_message(
@@ -366,12 +387,13 @@ class PokemonColoringPageCLI:
                     "func": attr,
                     "help": attr.command_help,
                     "arg_desc": attr.command_arg_desc,
+                    "short": attr.command_short,
                 }
         return commands
 
-    def _create_prompt_session(self):
+    def _add_prompt_suggestions(self):
         # Define a list of suggestions
-        suggestions = list(self.pokedex.values())
+        suggestions = [capwords(pokemon) for pokemon in self.pokedex.values()]
 
         # Add commands to suggestions
         suggestions += [f":{command}" for command in self.commands.keys()]
@@ -383,17 +405,31 @@ class PokemonColoringPageCLI:
                 page_sizes.append(f":page_size {page_size} {orientation}")
 
         # List types
-        suggestions += [
-            f":type_filter {type.capitalize()}" for type in get_types().keys()
-        ]
+        suggestions += [f":type_filter {capwords(type)}" for type in get_types().keys()]
 
         # Add page sizes to suggestions
         suggestions += page_sizes
 
-        # Create a prompt session with FuzzyCompleter
+        # Create FuzzyCompleter
         word_completer = WordCompleter(suggestions)
         fuzzy_completer = FuzzyCompleter(word_completer)
-        self.session = PromptSession(completer=fuzzy_completer)
+
+        # Add fuzzy completer to session
+        self.session.completer = fuzzy_completer
+
+    def _generate_coloring_page(self):
+        output_image = generate_pokemon_coloring_page(
+            include_list=self.selected_pokemon,
+            exclude_list=[],
+            rows=self.ROWS,
+            columns=self.COLUMNS,
+            page_width_mm=self.PAGE_WIDTH_MM,
+            page_height_mm=self.PAGE_HEIGHT_MM,
+            outer_margin_mm=self.OUTER_MARGIN_MM,
+            inner_margin_mm=self.INNER_MARGIN_MM,
+            font_size_mm=self.FONT_SIZE_MM,
+        )
+        return output_image
 
     def run(
         self,
@@ -452,7 +488,8 @@ class PokemonColoringPageCLI:
         self.pokedex = get_pokedex()
 
         # Create a prompt session
-        self._create_prompt_session()
+        self.session = PromptSession()
+        self._add_prompt_suggestions()
 
         while True:
             try:
@@ -470,17 +507,7 @@ class PokemonColoringPageCLI:
                         )
                     )
 
-                    output_image, exclude_list = pokemon_print_sheet(
-                        include_list=self.selected_pokemon.copy(),
-                        exclude_list=[],
-                        rows=self.ROWS,
-                        columns=self.COLUMNS,
-                        page_width_mm=self.PAGE_WIDTH_MM,
-                        page_height_mm=self.PAGE_HEIGHT_MM,
-                        outer_margin_mm=self.OUTER_MARGIN_MM,
-                        inner_margin_mm=self.INNER_MARGIN_MM,
-                        font_size_mm=self.FONT_SIZE_MM,
-                    )
+                    output_image = self._generate_coloring_page()
                     output_image.show()
 
                     self._add_message(
@@ -496,6 +523,13 @@ class PokemonColoringPageCLI:
 
                     if command_name in self.commands:
                         self.commands[command_name]["func"](command_args)
+                    elif command_name in [
+                        command["short"] for command in self.commands.values()
+                    ]:
+                        {
+                            command["short"]: command["func"]
+                            for command in self.commands.values()
+                        }[command_name](command_args)
                     else:
                         self._add_message("Invalid command. Please try again.")
                     continue

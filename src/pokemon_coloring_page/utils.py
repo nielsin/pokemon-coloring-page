@@ -5,7 +5,6 @@ from string import capwords
 from typing import Tuple
 
 import httpx
-import pokebase as pb
 from PIL import Image, ImageDraw, ImageFilter, ImageOps
 
 from .config import Config as config
@@ -13,6 +12,11 @@ from .config import Config as config
 
 @cache
 def get_types():
+    """
+    Retrieves the types of Pokemon from the PokeAPI.
+    Store everything in lowercase.
+    """
+
     url = f"{config.POKEAPI_URL}type"
 
     types = {}
@@ -21,11 +25,12 @@ def get_types():
         response = client.get(url)
         results = response.json()["results"]
         for type in [client.get(type["url"]).json() for type in results]:
-            types[type["name"]] = []
+            type_name = type["name"].lower()
+            types[type_name] = []
             for pokemon in type["pokemon"]:
-                name = pokemon["pokemon"]["name"]
+                name = pokemon["pokemon"]["name"].lower()
                 id = int(pokemon["pokemon"]["url"].split("/")[-2])
-                types[type["name"]].append({"name": name, "id": id})
+                types[type_name].append({"name": name, "id": id})
 
     return types
 
@@ -37,30 +42,25 @@ def get_pokedex_types():
         for pokemon in pokemon_list:
             if pokemon["id"] not in pokedex:
                 pokedex[pokemon["id"]] = {
-                    "name": capwords(pokemon["name"]),
-                    "types": [capwords(type)],
+                    "name": pokemon["name"],
+                    "types": [type],
                 }
             else:
-                pokedex[pokemon["id"]]["types"].append(capwords(type))
+                pokedex[pokemon["id"]]["types"].append(type)
     return pokedex
 
 
 @cache
 def get_pokedex(type_filter: str = None):
     if type_filter:
-        if type_filter.lower() in [t.lower() for t in get_types().keys()]:
-            filter_str = capwords(type_filter)
+        type_filter = type_filter.lower()
+        if type_filter in get_types().keys():
             return {
                 k: v["name"]
                 for k, v in get_pokedex_types().items()
-                if filter_str in v["types"]
+                if type_filter in v["types"]
             }
     return {k: v["name"] for k, v in get_pokedex_types().items()}
-
-
-@cache
-def _pokedex_lowercase():
-    return {v.lower(): k for k, v in get_pokedex().items()}
 
 
 def pokemon_id2name(pokemon_id: int) -> str:
@@ -77,6 +77,11 @@ def pokemon_id2name(pokemon_id: int) -> str:
     return get_pokedex().get(pokemon_id, None)
 
 
+@cache
+def _pokedex_names():
+    return {v: k for k, v in get_pokedex().items()}
+
+
 def pokemon_name2id(pokemon_name: str) -> int:
     """
     Converts a Pokemon name to its ID.
@@ -88,7 +93,7 @@ def pokemon_name2id(pokemon_name: str) -> int:
         int: The ID of the Pokemon.
     """
 
-    return _pokedex_lowercase().get(pokemon_name.lower(), None)
+    return _pokedex_names().get(pokemon_name.lower(), None)
 
 
 def pokemon_id2types(pokemon_id: int) -> list:
@@ -117,9 +122,28 @@ def get_image_by_id(pokemon_id: int) -> Image.Image:
         Image: The image of the Pokemon.
     """
 
-    im = pb.SpriteResource("pokemon", pokemon_id, other=True, official_artwork=True)
+    with httpx.Client() as client:
+        try:
+            im = client.get(
+                f"{config.SPRITES_URL}pokemon/other/official-artwork/{pokemon_id}.png"
+            ).content
+            return Image.open(BytesIO(im))
+        except Exception:
+            pass
 
-    return Image.open(BytesIO(im.img_data))
+        try:
+            im = client.get(
+                f"{config.SPRITES_URL}pokemon/other/home/{pokemon_id}.png"
+            ).content
+            return Image.open(BytesIO(im))
+        except Exception:
+            pass
+
+        try:
+            im = client.get(f"{config.SPRITES_URL}pokemon/{pokemon_id}.png").content
+            return Image.open(BytesIO(im))
+        except Exception:
+            pass
 
 
 def get_image_by_name(pokemon_name: str) -> Image.Image:
@@ -137,7 +161,35 @@ def get_image_by_name(pokemon_name: str) -> Image.Image:
     return get_image_by_id(pokemon_id)
 
 
-def create_coloring_page(
+@cache
+def get_pokemon_print_name(pokemon_id, language="en"):
+    with httpx.Client() as client:
+        url = f"{config.POKEAPI_URL}pokemon-species/{pokemon_id}"
+        response = client.get(url)
+        if response.status_code == 200:
+            data = response.json()
+            for entry in data["names"]:
+                if entry["language"]["name"] == language:
+                    return entry["name"]
+
+        url = f"{config.POKEAPI_URL}pokemon/{pokemon_id}"
+        response = client.get(url)
+        if response.status_code == 200:
+            data = response.json()
+            name = data["name"]
+            for form in data["forms"]:
+                if form["name"] == name:
+                    response = client.get(form["url"])
+                    if response.status_code == 200:
+                        data = response.json()
+                        for entry in data["names"]:
+                            if entry["language"]["name"] == language:
+                                return entry["name"]
+
+        return capwords(pokemon_id2name(pokemon_id).replace("-", " "))  # Fallback
+
+
+def create_coloring_image(
     image: Image.Image, noise_threshold: float = 0.95
 ) -> Image.Image:
     """
@@ -172,40 +224,6 @@ def create_coloring_page(
     return image_clean
 
 
-def pokemon_coloring_page(
-    pokemon_name: str = None, pokemon_id: int = None, stamp_name: bool = True
-) -> Tuple[Image.Image, Image.Image, str, int]:
-    """
-    Generates a coloring page for a Pokemon.
-
-    Args:
-        pokemon_name (str, optional): The name of the Pokemon. Defaults to None.
-        pokemon_id (int, optional): The ID of the Pokemon. Defaults to None.
-        stamp_name (bool, optional): Whether to stamp the Pokemon name on the coloring page. Defaults to True.
-
-    Returns:
-        Tuple[Image, Image, str, int]: A tuple containing the coloring page image, the original image, the Pokemon name, and the Pokemon ID.
-    """
-
-    if pokemon_name:
-        pokemon_id = pokemon_name2id(pokemon_name)
-    elif pokemon_id:
-        pokemon_name = pokemon_id2name(pokemon_id)
-    else:
-        # Get random pokemon
-        pokemon_id = random.choice(list(get_pokedex().keys()))
-        pokemon_name = pokemon_id2name(pokemon_id)
-
-    image = get_image_by_id(pokemon_id)
-    coloring_page = create_coloring_page(image)
-
-    if stamp_name:
-        draw = ImageDraw.Draw(coloring_page)
-        draw.text((0, 0), f"#{pokemon_id} - {pokemon_name}", fill="black")
-
-    return coloring_page, image, pokemon_name, pokemon_id
-
-
 def img_resize(image: Image.Image, max_width: int, max_height: int) -> Image.Image:
     """
     Resize the given image while maintaining its aspect ratio.
@@ -229,7 +247,7 @@ def img_resize(image: Image.Image, max_width: int, max_height: int) -> Image.Ima
     return image.resize((w, h), resample=Image.LANCZOS)
 
 
-def pokemon_print_sheet(
+def generate_pokemon_coloring_page(
     page_height_mm: float = config.PAGE_HEIGHT_MM,
     page_width_mm: float = config.PAGE_WIDTH_MM,
     outer_margin_mm: float = config.OUTER_MARGIN_MM,
@@ -266,6 +284,10 @@ def pokemon_print_sheet(
     INNER_MARGIN = int(inner_margin_mm * dpi / 25.4)
     FONT_SIZE = int(font_size_mm * dpi / 25.4)
 
+    # Make a copy of the include and exclude lists
+    include_list = include_list.copy()
+    exclude_list = exclude_list.copy()
+
     # Create a new image for the paper
     output_image = Image.new("RGB", (PAGE_WIDTH, PAGE_HEIGHT), "white")
 
@@ -284,11 +306,10 @@ def pokemon_print_sheet(
                     if len(include_list) > 0:
                         pokemon_id = include_list[0]
                     else:
-                        pokemon_id = None
+                        pokemon_id = random.choice(list(get_pokedex().keys()))
 
-                    coloring_page, image, pokemon_name, pokemon_id = (
-                        pokemon_coloring_page(pokemon_id=pokemon_id, stamp_name=False)
-                    )
+                    image = get_image_by_id(pokemon_id)
+                    coloring_image = create_coloring_image(image)
 
                 except Exception as e:
                     print(f"Error: {e}")
@@ -307,20 +328,23 @@ def pokemon_print_sheet(
                     exclude_list.append(pokemon_id)
                     break
 
-            coloring_page = img_resize(coloring_page, MAX_IMAGE_WIDTH, MAX_IMAGE_HEIGHT)
+            coloring_image = img_resize(
+                coloring_image, MAX_IMAGE_WIDTH, MAX_IMAGE_HEIGHT
+            )
 
             x = j * IMAGE_BOX_WIDTH + OUTER_MARGIN
             y = i * IMAGE_BOX_HEIGHT + OUTER_MARGIN
 
-            dx = (IMAGE_BOX_WIDTH - coloring_page.width) // 2
-            dy = (IMAGE_BOX_HEIGHT - coloring_page.height) // 2
+            dx = (IMAGE_BOX_WIDTH - coloring_image.width) // 2
+            dy = (IMAGE_BOX_HEIGHT - coloring_image.height) // 2
 
-            output_image.paste(coloring_page, (x + dx, y + dy))
+            output_image.paste(coloring_image, (x + dx, y + dy))
 
             draw = ImageDraw.Draw(output_image)
+
             draw.text(
                 (x + INNER_MARGIN, y + INNER_MARGIN),
-                f"#{pokemon_id} - {pokemon_name}\n{'\n'.join([t for t in pokemon_id2types(pokemon_id)])}",
+                f"#{pokemon_id} - {get_pokemon_print_name(pokemon_id)}\n{'\n'.join([capwords(t) for t in pokemon_id2types(pokemon_id)])}",
                 fill="black",
                 font_size=FONT_SIZE,
             )
@@ -341,4 +365,4 @@ def pokemon_print_sheet(
             (x, OUTER_MARGIN, x, PAGE_HEIGHT - OUTER_MARGIN), fill="black", width=1
         )
 
-    return output_image, exclude_list
+    return output_image

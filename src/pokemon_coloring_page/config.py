@@ -1,6 +1,7 @@
 class Config:
     # Pokédex
     POKEAPI_URL = "https://pokeapi.co/api/v2/"
+    SPRITES_URL = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/"
 
     # Default sheet settings
     PAGE_WIDTH_MM = 297
