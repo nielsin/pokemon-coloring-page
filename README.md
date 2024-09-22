@@ -1,4 +1,4 @@
-# pokémon-coloring-page
+# pokemon-coloring-page
 A simple coloring page genrator for Pokémon. Creates a page with multiple Pokémon to color in.
 ![coling page example](pokemon-coloring-page.png)
 
