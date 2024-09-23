@@ -240,31 +240,34 @@ def create_coloring_image(
     if image.mode == "RGBA":
         image = Image.alpha_composite(Image.new("RGBA", image.size, "WHITE"), image)
 
-    # Resize the image
-    image = img_resize(image, max_width, max_height)
-
-    if not color:
-        # Convert to grayscale
-        image = image.convert("L")
-        # Smooth the image
-        image = image.filter(ImageFilter.SMOOTH)
-        # Get contours
-        image = image.filter(ImageFilter.CONTOUR)
-
-        # Remove noise
-        image = image.point(lambda p: 255 if p > 255 * (1 - noise_threshold) else p)
-        image = image.point(lambda p: 0 if p < 255 * noise_threshold else p)
-
-        # Stretch histogram
-        image = ImageOps.autocontrast(image, cutoff=histogram_cutoff * 100, ignore=255)
-
     # Crop the image
     if crop:
         inverted_image = ImageOps.invert(image.convert("L"))
         bbox = inverted_image.getbbox()
         if bbox:
             image = image.crop(bbox)
-            image = img_resize(image, max_width, max_height)
+            # Add padding to prevent artifacts at the edges when resizing
+            image = ImageOps.expand(image, border=1, fill="WHITE")
+
+    # Resize the image
+    image = img_resize(image, max_width, max_height)
+
+    if not color:
+        # Convert to grayscale
+        image = image.convert("L")
+        # Pad the image
+        image = ImageOps.expand(image, border=10, fill=255)
+        # Smooth the image
+        image = image.filter(ImageFilter.SMOOTH)
+        # Get contours
+        image = image.filter(ImageFilter.CONTOUR)
+        # Remove noise
+        image = image.point(lambda p: 255 if p > 255 * (1 - noise_threshold) else p)
+        image = image.point(lambda p: 0 if p < 255 * noise_threshold else p)
+        # Stretch histogram
+        image = ImageOps.autocontrast(image, cutoff=histogram_cutoff * 100, ignore=255)
+        # Remove padding
+        image = ImageOps.crop(image, border=10)
 
     return image
 
