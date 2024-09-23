@@ -52,7 +52,8 @@ class PokemonColoringPageCLI:
         self.color_selected_pokemon = "green"
         self.color_unselected_pokemon = "gray"
         self.color_message = "red"
-        self.color_highlight = "blue"
+        self.color_highlight = "orange"
+        self.color_command = "skyblue"
 
     def _n_pokemon(self):
         return self.ROWS * self.COLUMNS
@@ -109,15 +110,13 @@ class PokemonColoringPageCLI:
         # Print page setup
         for line in [
             "<white>Pokémon </white><red>C</red><green>O</green><yellow>L</yellow><blue>O</blue><magenta>R</magenta><cyan>I</cyan><red>N</red><green>G</green><white> page CLI</white>",
-            "",
-            f"<{self.color_page_setup}>Page size:\t{self.PAGE_WIDTH_MM}x{self.PAGE_HEIGHT_MM}mm ({self._get_page_description()})</{self.color_page_setup}>",
-            f"<{self.color_page_setup}>Outer margin:\t{self.OUTER_MARGIN_MM}mm</{self.color_page_setup}>",
-            f"<{self.color_page_setup}>Inner margin:\t{self.INNER_MARGIN_MM}mm</{self.color_page_setup}>",
-            f"<{self.color_page_setup}>Font size:\t{self.FONT_SIZE_MM}mm</{self.color_page_setup}>",
-            f"<{self.color_page_setup}>Grid:\t\t{self.COLUMNS}x{self.ROWS}</{self.color_page_setup}>",
-            "",
-            f"Use <{self.color_highlight}>:help</{self.color_highlight}> command for help.",
-            "",
+            f" <{self.color_page_setup}>Page size:\t{self.PAGE_WIDTH_MM}x{self.PAGE_HEIGHT_MM}mm ({self._get_page_description()})</{self.color_page_setup}>",
+            f" <{self.color_page_setup}>Outer margin:\t{self.OUTER_MARGIN_MM}mm</{self.color_page_setup}>",
+            f" <{self.color_page_setup}>Inner margin:\t{self.INNER_MARGIN_MM}mm</{self.color_page_setup}>",
+            f" <{self.color_page_setup}>Font size:\t{self.FONT_SIZE_MM}mm</{self.color_page_setup}>",
+            f" <{self.color_page_setup}>Grid:\t\t{self.COLUMNS}x{self.ROWS}</{self.color_page_setup}>",
+            f" <{self.color_page_setup}>Color:\t\t{self.COLOR}</{self.color_page_setup}>",
+            f" <{self.color_page_setup}>Crop:\t\t{self.CROP}</{self.color_page_setup}>",
             f"Selected Pokémon (<{self.color_unselected_pokemon}>auto</{self.color_unselected_pokemon}>/<{self.color_selected_pokemon}>manual</{self.color_selected_pokemon}>):",
         ]:
             print_formatted_text(HTML(line))
@@ -149,9 +148,14 @@ class PokemonColoringPageCLI:
         if self.FILTER:
             print_formatted_text(
                 HTML(
-                    f"<{self.color_highlight}>Filter: {capwords(self.FILTER)}</{self.color_highlight}>"
+                    f"Filter: <{self.color_highlight}>{capwords(self.FILTER)}</{self.color_highlight}>"
                 )
             )
+        print_formatted_text(
+            HTML(
+                f"Use <{self.color_command}>:help</{self.color_command}> command for help.",
+            )
+        )
 
     @command("help", command_help="Show help", command_short="h")
     def _help(self, _):
@@ -162,9 +166,11 @@ class PokemonColoringPageCLI:
                 command_info["arg_desc"] if command_info["arg_desc"] else ""
             )
             command_short = f":{command_info['short']}" if command_info["short"] else ""
-            command_short = f"<{self.color_selected_pokemon}>{command_short}</{self.color_selected_pokemon}>"
+            command_short = (
+                f"<{self.color_command}>{command_short}</{self.color_command}>"
+            )
 
-            c = f" <{self.color_selected_pokemon}>:{command_name}</{self.color_selected_pokemon}> <{self.color_unselected_pokemon}>{command_arg_desc}</{self.color_unselected_pokemon}>"
+            c = f" <{self.color_command}>:{command_name}</{self.color_command}> <{self.color_unselected_pokemon}>{command_arg_desc}</{self.color_unselected_pokemon}>"
 
             command_help = command_info["help"] if command_info["help"] else ""
             command_desc.append([c, command_help, command_short])
@@ -187,7 +193,7 @@ class PokemonColoringPageCLI:
             "\n".join(command_desc),
             "",
             f"Press <{self.color_highlight}>Enter</{self.color_highlight}> with empty prompt to generate coloring page and open in preview window.",
-            f"Use <{self.color_highlight}>:save</{self.color_highlight}> to genereate coloring page and save directly to file.",
+            f"Use <{self.color_command}>:write</{self.color_command}> to genereate coloring page and save directly to file.",
             "",
         ]
         for msg in msg_list:
@@ -196,6 +202,14 @@ class PokemonColoringPageCLI:
     @command("quit", command_help="Quit the CLI app", command_short="q")
     def _quit(self, _):
         sys.exit()
+
+    @command("color", command_help="Toggle color mode")
+    def _color(self, _):
+        self.COLOR = not self.COLOR
+
+    @command("crop", command_help="Toggle crop mode")
+    def _crop(self, _):
+        self.CROP = not self.CROP
 
     @command(
         "reset_selection",
@@ -428,6 +442,8 @@ class PokemonColoringPageCLI:
             outer_margin_mm=self.OUTER_MARGIN_MM,
             inner_margin_mm=self.INNER_MARGIN_MM,
             font_size_mm=self.FONT_SIZE_MM,
+            color=self.COLOR,
+            crop=self.CROP,
         )
         return output_image
 
@@ -474,8 +490,12 @@ class PokemonColoringPageCLI:
         self.FONT_SIZE_MM = font_size
         self.ROWS = rows
         self.COLUMNS = columns
+
+        # Other variables
         self.MESSAGES = []
         self.FILTER = None
+        self.COLOR = False
+        self.CROP = True
 
         # Initialize selected pokemon
         self.selected_pokemon = []

@@ -190,7 +190,10 @@ def get_pokemon_print_name(pokemon_id, language="en"):
 
 
 def create_coloring_image(
-    image: Image.Image, noise_threshold: float = 0.95
+    image: Image.Image,
+    noise_threshold: float = 0.95,
+    crop: bool = True,
+    color: bool = False,
 ) -> Image.Image:
     """
     Creates a coloring page from the given image.
@@ -206,22 +209,28 @@ def create_coloring_image(
     # Create white background if image is RGBA
     if image.mode == "RGBA":
         image = Image.alpha_composite(Image.new("RGBA", image.size, "WHITE"), image)
-    # Convert to grayscale
-    image_gray = image.convert("L")
-    # Smooth the image
-    image_smooth = image_gray.filter(ImageFilter.SMOOTH)
-    # Get contours
-    image_contour = image_smooth.filter(ImageFilter.CONTOUR)
-    # Remove noise
-    image_clean = image_contour.point(lambda p: 255 if p > 255 * noise_threshold else p)
+
+    if not color:
+        # Convert to grayscale
+        image = image.convert("L")
+        # Smooth the image
+        image = image.filter(ImageFilter.SMOOTH)
+        # Get contours
+        image = image.filter(ImageFilter.CONTOUR)
+        # Remove noise
+        image = image.point(lambda p: 255 if p > 255 * noise_threshold else p)
 
     # Remove white borders from image
-    inverted_image = ImageOps.invert(image_clean)
-    bbox = inverted_image.getbbox()
-    if bbox:
-        image_clean = image_clean.crop(bbox)
+    if crop:
+        if image.mode != "L":
+            inverted_image = ImageOps.invert(image.convert("L"))
+        else:
+            inverted_image = ImageOps.invert(image)
+        bbox = inverted_image.getbbox()
+        if bbox:
+            image = image.crop(bbox)
 
-    return image_clean
+    return image
 
 
 def img_resize(image: Image.Image, max_width: int, max_height: int) -> Image.Image:
@@ -258,6 +267,8 @@ def generate_pokemon_coloring_page(
     columns: int = config.COLUMNS,
     include_list: list = [],
     exclude_list: list = [],
+    color: bool = False,
+    crop: bool = True,
 ) -> Tuple[Image.Image, list]:
     """
     Generate a sheet of Pokemon coloring pages.
@@ -273,6 +284,8 @@ def generate_pokemon_coloring_page(
         columns (int): The number of columns in the sheet. Defaults to config.COLUMNS.
         include_list (list): A list of Pokemon IDs to include in the sheet. Defaults to an empty list.
         exclude_list (list): A list of Pokemon IDs to exclude from the sheet. Defaults to an empty list.
+        color (bool): Whether to generate a colored sheet. Defaults to False.
+        crop (bool): Whether to crop the images. Defaults to True.
 
     Returns:
         Tuple[Image, list]: A tuple containing the output image and the updated exclude list.
@@ -309,7 +322,9 @@ def generate_pokemon_coloring_page(
                         pokemon_id = random.choice(list(get_pokedex().keys()))
 
                     image = get_image_by_id(pokemon_id)
-                    coloring_image = create_coloring_image(image)
+                    coloring_image = create_coloring_image(
+                        image, color=color, crop=crop
+                    )
 
                 except Exception as e:
                     print(f"Error: {e}")
