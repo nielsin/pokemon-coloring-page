@@ -228,6 +228,8 @@ class PokemonColoringPageCLI:
         self.FONT_SIZE_MM = self.INITIAL_FONT_SIZE_MM
         self.ROWS = self.INITIAL_ROWS
         self.COLUMNS = self.INITIAL_COLUMNS
+        self.COLOR = self.INITIAL_COLOR
+        self.CROP = self.INITIAL_CROP
 
     @command(
         "page_width", command_arg_desc="width", command_help="Set page width in mm"
@@ -468,6 +470,8 @@ class PokemonColoringPageCLI:
         columns: Annotated[
             int, typer.Option(help="Number of columns")
         ] = config.COLUMNS,
+        color: Annotated[bool, typer.Option(help="Color images")] = config.COLOR,
+        crop: Annotated[bool, typer.Option(help="Crop images")] = config.CROP,
     ):
         """
         Run the Pokémon Coloring Page CLI.
@@ -481,6 +485,8 @@ class PokemonColoringPageCLI:
         self.INITIAL_FONT_SIZE_MM = font_size
         self.INITIAL_ROWS = rows
         self.INITIAL_COLUMNS = columns
+        self.INITIAL_COLOR = color
+        self.INITIAL_CROP = crop
 
         # Store values
         self.PAGE_WIDTH_MM = page_width
@@ -490,12 +496,12 @@ class PokemonColoringPageCLI:
         self.FONT_SIZE_MM = font_size
         self.ROWS = rows
         self.COLUMNS = columns
+        self.COLOR = color
+        self.CROP = crop
 
         # Other variables
         self.MESSAGES = []
         self.FILTER = None
-        self.COLOR = False
-        self.CROP = True
 
         # Initialize selected pokemon
         self.selected_pokemon = []
