@@ -189,50 +189,6 @@ def get_pokemon_print_name(pokemon_id, language="en"):
         return capwords(pokemon_id2name(pokemon_id).replace("-", " "))  # Fallback
 
 
-def create_coloring_image(
-    image: Image.Image,
-    noise_threshold: float = 0.95,
-    crop: bool = True,
-    color: bool = False,
-) -> Image.Image:
-    """
-    Creates a coloring page from the given image.
-
-    Args:
-        image (Image): The input image.
-        noise_threshold (float, optional): The threshold value for noise removal. Defaults to 0.95.
-
-    Returns:
-        Image: The coloring page image.
-    """
-
-    # Create white background if image is RGBA
-    if image.mode == "RGBA":
-        image = Image.alpha_composite(Image.new("RGBA", image.size, "WHITE"), image)
-
-    if not color:
-        # Convert to grayscale
-        image = image.convert("L")
-        # Smooth the image
-        image = image.filter(ImageFilter.SMOOTH)
-        # Get contours
-        image = image.filter(ImageFilter.CONTOUR)
-        # Remove noise
-        image = image.point(lambda p: 255 if p > 255 * noise_threshold else p)
-
-    # Remove white borders from image
-    if crop:
-        if image.mode != "L":
-            inverted_image = ImageOps.invert(image.convert("L"))
-        else:
-            inverted_image = ImageOps.invert(image)
-        bbox = inverted_image.getbbox()
-        if bbox:
-            image = image.crop(bbox)
-
-    return image
-
-
 def img_resize(image: Image.Image, max_width: int, max_height: int) -> Image.Image:
     """
     Resize the given image while maintaining its aspect ratio.
@@ -254,6 +210,63 @@ def img_resize(image: Image.Image, max_width: int, max_height: int) -> Image.Ima
         w = int(image.width * (h / image.height))
 
     return image.resize((w, h), resample=Image.LANCZOS)
+
+
+@cache
+def create_coloring_image(
+    pokemon_id: int,
+    max_width: int,
+    max_height: int,
+    noise_threshold: float = 0.05,
+    histogram_cutoff: float = 0.1,
+    crop: bool = True,
+    color: bool = False,
+) -> Image.Image:
+    """
+    Creates a coloring page from the given image.
+
+    Args:
+        image (Image): The input image.
+        noise_threshold (float, optional): The threshold value for noise removal. Defaults to 0.05.
+
+    Returns:
+        Image: The coloring page image.
+    """
+
+    # Get the image of the Pokemon
+    image = get_image_by_id(pokemon_id)
+
+    # Create white background if image is RGBA
+    if image.mode == "RGBA":
+        image = Image.alpha_composite(Image.new("RGBA", image.size, "WHITE"), image)
+
+    # Resize the image
+    image = img_resize(image, max_width, max_height)
+
+    if not color:
+        # Convert to grayscale
+        image = image.convert("L")
+        # Smooth the image
+        image = image.filter(ImageFilter.SMOOTH)
+        # Get contours
+        image = image.filter(ImageFilter.CONTOUR)
+
+        # Remove noise
+        image = image.point(lambda p: 255 if p > 255 * (1 - noise_threshold) else p)
+        image = image.point(lambda p: 0 if p < 255 * noise_threshold else p)
+
+        # Stretch histogram
+        image = ImageOps.autocontrast(image, cutoff=histogram_cutoff * 100, ignore=255)
+
+    # Crop the image
+    if crop:
+        inverted_image = ImageOps.invert(image.convert("L"))
+        bbox = inverted_image.getbbox()
+        if bbox:
+            image = image.crop(bbox)
+            image = img_resize(image, max_width, max_height)
+
+    return image
 
 
 def generate_pokemon_coloring_page(
@@ -321,9 +334,12 @@ def generate_pokemon_coloring_page(
                     else:
                         pokemon_id = random.choice(list(get_pokedex().keys()))
 
-                    image = get_image_by_id(pokemon_id)
                     coloring_image = create_coloring_image(
-                        image, color=color, crop=crop
+                        pokemon_id,
+                        MAX_IMAGE_WIDTH,
+                        MAX_IMAGE_HEIGHT,
+                        color=color,
+                        crop=crop,
                     )
 
                 except Exception as e:
@@ -342,10 +358,6 @@ def generate_pokemon_coloring_page(
                 if pokemon_id not in exclude_list:
                     exclude_list.append(pokemon_id)
                     break
-
-            coloring_image = img_resize(
-                coloring_image, MAX_IMAGE_WIDTH, MAX_IMAGE_HEIGHT
-            )
 
             x = j * IMAGE_BOX_WIDTH + OUTER_MARGIN
             y = i * IMAGE_BOX_HEIGHT + OUTER_MARGIN
