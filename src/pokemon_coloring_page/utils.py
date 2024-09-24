@@ -123,6 +123,8 @@ def get_image_by_id(pokemon_id: int) -> Image.Image:
     """
 
     with httpx.Client() as client:
+        # Check Pokemon ID: 10270
+
         try:
             im = client.get(
                 f"{config.SPRITES_URL}pokemon/other/official-artwork/{pokemon_id}.png"

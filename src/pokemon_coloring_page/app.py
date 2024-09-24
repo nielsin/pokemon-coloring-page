@@ -394,6 +394,20 @@ class PokemonColoringPageCLI:
             custom_colors=True,
         )
 
+    @command(
+        "grid",
+        command_help="Set columns and rows in grid",
+        command_short="g",
+        command_arg_desc="columns rows",
+    )
+    def _set_grid(self, grid: str):
+        try:
+            columns, rows = map(int, grid.split(" "))
+            self.COLUMNS = columns
+            self.ROWS = rows
+        except ValueError:
+            self._add_message("Invalid grid. Please try again.")
+
     def _get_commands(self):
         commands = {}
         for name in dir(self):
