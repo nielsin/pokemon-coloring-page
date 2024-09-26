@@ -14,6 +14,7 @@ from .utils import (
     generate_pokemon_coloring_page,
     get_pokedex,
     get_types,
+    memory,
     pokemon_id2name,
     pokemon_id2types,
     pokemon_name2id,
@@ -486,10 +487,15 @@ class PokemonColoringPageCLI:
         ] = config.COLUMNS,
         color: Annotated[bool, typer.Option(help="Color images")] = config.COLOR,
         crop: Annotated[bool, typer.Option(help="Crop images")] = config.CROP,
+        clear_cache: Annotated[bool, typer.Option(help="Clear PokeAPI cache")] = False,
     ):
         """
         Run the Pokémon Coloring Page CLI.
         """
+
+        # Clear cache
+        if clear_cache:
+            memory.clear()
 
         # Store initial values
         self.INITIAL_PAGE_WIDTH_MM = page_width

@@ -1,4 +1,10 @@
+from pathlib import Path
+
+
 class Config:
+    # Cache directory
+    CACHE_DIR = Path.home() / ".cache" / "pokemon-coloring-page"
+
     # Pokédex
     POKEAPI_URL = "https://pokeapi.co/api/v2/"
     SPRITES_URL = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/"

@@ -5,12 +5,15 @@ from string import capwords
 from typing import Tuple
 
 import httpx
+from joblib import Memory
 from PIL import Image, ImageDraw, ImageFilter, ImageOps
 
 from .config import Config as config
 
+memory = Memory(location=config.CACHE_DIR, verbose=0)
 
-@cache
+
+@memory.cache
 def get_types():
     """
     Retrieves the types of Pokemon from the PokeAPI.
@@ -110,7 +113,7 @@ def pokemon_id2types(pokemon_id: int) -> list:
     return get_pokedex_types().get(pokemon_id, {}).get("types", [])
 
 
-@cache
+@memory.cache
 def get_image_by_id(pokemon_id: int) -> Image.Image:
     """
     Retrieves the image of a Pokemon based on its ID.
@@ -163,7 +166,7 @@ def get_image_by_name(pokemon_name: str) -> Image.Image:
     return get_image_by_id(pokemon_id)
 
 
-@cache
+@memory.cache
 def get_pokemon_print_name(pokemon_id, language="en"):
     with httpx.Client() as client:
         url = f"{config.POKEAPI_URL}pokemon-species/{pokemon_id}"
@@ -214,7 +217,6 @@ def img_resize(image: Image.Image, max_width: int, max_height: int) -> Image.Ima
     return image.resize((w, h), resample=Image.LANCZOS)
 
 
-@cache
 def create_coloring_image(
     pokemon_id: int,
     max_width: int,
