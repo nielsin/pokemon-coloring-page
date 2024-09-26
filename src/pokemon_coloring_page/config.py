@@ -1,9 +1,12 @@
+from datetime import timedelta
 from pathlib import Path
 
 
 class Config:
-    # Cache directory
+    # Cache
     CACHE_DIR = Path.home() / ".cache" / "pokemon-coloring-page"
+    CACHE_AGE_LIMIT = timedelta(days=7)
+    CACHE_POKEDEX_EXPIRE_AFTER = {"days": 1}
 
     # Pokédex
     POKEAPI_URL = "https://pokeapi.co/api/v2/"

@@ -5,15 +5,20 @@ from string import capwords
 from typing import Tuple
 
 import httpx
-from joblib import Memory
+from joblib import Memory, expires_after
 from PIL import Image, ImageDraw, ImageFilter, ImageOps
 
 from .config import Config as config
 
+# Create a cache object
 memory = Memory(location=config.CACHE_DIR, verbose=0)
+# Clear old cache entries
+memory.reduce_size(age_limit=config.CACHE_AGE_LIMIT)
 
 
-@memory.cache
+@memory.cache(
+    cache_validation_callback=expires_after(**config.CACHE_POKEDEX_EXPIRE_AFTER)
+)
 def get_types():
     """
     Retrieves the types of Pokemon from the PokeAPI.
@@ -127,6 +132,7 @@ def get_image_by_id(pokemon_id: int) -> Image.Image:
 
     with httpx.Client() as client:
         # Check Pokemon ID: 10270
+        # Pokemon ID: 10267
 
         try:
             im = client.get(
