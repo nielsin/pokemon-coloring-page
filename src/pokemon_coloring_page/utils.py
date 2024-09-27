@@ -5,7 +5,7 @@ from string import capwords
 from typing import Tuple
 
 import httpx
-from joblib import Memory, expires_after
+from joblib import Memory
 from PIL import Image, ImageDraw, ImageFilter, ImageOps
 
 from .config import Config as config
@@ -16,9 +16,7 @@ memory = Memory(location=config.CACHE_DIR, verbose=0)
 memory.reduce_size(age_limit=config.CACHE_AGE_LIMIT)
 
 
-@memory.cache(
-    cache_validation_callback=expires_after(**config.CACHE_POKEDEX_EXPIRE_AFTER)
-)
+@memory.cache
 def get_types():
     """
     Retrieves the types of Pokemon from the PokeAPI.
