@@ -15,6 +15,7 @@ from .utils import (
     get_pokedex,
     get_types,
     memory,
+    parallel_cache_pokeapi_calls,
     pokemon_id2name,
     pokemon_id2types,
     pokemon_name2id,
@@ -449,6 +450,7 @@ class PokemonColoringPageCLI:
         self.session.completer = fuzzy_completer
 
     def _generate_coloring_page(self):
+        parallel_cache_pokeapi_calls(self.selected_pokemon)
         output_image = generate_pokemon_coloring_page(
             include_list=self.selected_pokemon,
             exclude_list=[],

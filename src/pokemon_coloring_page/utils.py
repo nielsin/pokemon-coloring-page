@@ -5,7 +5,7 @@ from string import capwords
 from typing import Tuple
 
 import httpx
-from joblib import Memory
+from joblib import Memory, Parallel, delayed
 from PIL import Image, ImageDraw, ImageFilter, ImageOps
 
 from .config import Config as config
@@ -278,6 +278,17 @@ def create_coloring_image(
         image = ImageOps.crop(image, border=10)
 
     return image
+
+
+def parallel_cache_pokeapi_calls(ids):
+    """
+    Parallelize the cache calls to the PokeAPI.
+    Will cache the image and print name of the Pokemon.
+    """
+    Parallel(n_jobs=-1, backend="threading")(
+        [delayed(get_image_by_id)(i) for i in ids]
+        + [delayed(get_pokemon_print_name)(i) for i in ids]
+    )
 
 
 def generate_pokemon_coloring_page(

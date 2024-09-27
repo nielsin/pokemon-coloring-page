@@ -1,6 +1,6 @@
 [project]
 name = "pokemon-coloring-page"
-version = "0.2.12"
+version = "0.2.13"
 description = "A simple coloring page genrator for Pokémon. Creates a page with multiple Pokémon to color in."
 readme = "README.md"
 requires-python = ">=3.12"
