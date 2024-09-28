@@ -391,11 +391,20 @@ def generate_pokemon_coloring_page(
 
             draw = ImageDraw.Draw(output_image)
 
+            line_spacing = int(0.2 * FONT_SIZE)
+
             draw.text(
                 (x + INNER_MARGIN, y + INNER_MARGIN),
-                f"#{pokemon_id} - {get_pokemon_print_name(pokemon_id)}\n{'\n'.join([capwords(t) for t in pokemon_id2types(pokemon_id)])}",
-                fill="black",
+                f"#{pokemon_id} - {get_pokemon_print_name(pokemon_id)}",
+                fill=config.COLOR_NAMES,
                 font_size=FONT_SIZE,
+            )
+            draw.text(
+                (x + INNER_MARGIN, y + INNER_MARGIN + line_spacing + FONT_SIZE),
+                f"{'\n'.join([capwords(t) for t in pokemon_id2types(pokemon_id)])}",
+                fill=config.COLOR_TYPES,
+                font_size=FONT_SIZE,
+                spacing=line_spacing,
             )
 
     draw = ImageDraw.Draw(output_image)
@@ -404,14 +413,27 @@ def generate_pokemon_coloring_page(
     for i in range(rows - 1):
         y = IMAGE_BOX_HEIGHT * (i + 1) + OUTER_MARGIN
         draw.line(
-            (OUTER_MARGIN, y, PAGE_WIDTH - OUTER_MARGIN, y), fill="black", width=1
+            (OUTER_MARGIN, y, PAGE_WIDTH - OUTER_MARGIN, y),
+            fill=config.COLOR_LINES,
+            width=1,
         )
 
     # Draw vertical lines
     for i in range(columns - 1):
         x = IMAGE_BOX_WIDTH * (i + 1) + OUTER_MARGIN
         draw.line(
-            (x, OUTER_MARGIN, x, PAGE_HEIGHT - OUTER_MARGIN), fill="black", width=1
+            (x, OUTER_MARGIN, x, PAGE_HEIGHT - OUTER_MARGIN),
+            fill=config.COLOR_LINES,
+            width=1,
         )
+
+    # Draw attribution
+    draw.text(
+        (PAGE_WIDTH - OUTER_MARGIN, PAGE_HEIGHT - OUTER_MARGIN),
+        config.ATTRIBUTION,
+        fill=config.COLOR_ATTRIBUTION,
+        font_size=FONT_SIZE,
+        anchor="rd",
+    )
 
     return output_image

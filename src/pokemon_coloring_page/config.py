@@ -7,6 +7,9 @@ class Config:
     CACHE_DIR = Path.home() / ".cache" / "pokemon-coloring-page"
     CACHE_AGE_LIMIT = timedelta(days=1)
 
+    # Attribution
+    ATTRIBUTION = "Data source: pokeapi.co"
+
     # Pokédex
     POKEAPI_URL = "https://pokeapi.co/api/v2/"
     SPRITES_URL = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/"
@@ -22,6 +25,12 @@ class Config:
     COLUMNS = 3
     COLOR = False
     CROP = True
+
+    # Page element colors
+    COLOR_LINES = "gray"
+    COLOR_NAMES = "gray"
+    COLOR_TYPES = "gray"
+    COLOR_ATTRIBUTION = "gray"
 
     # Standard page sizes in mm (width, height) in portrait orientation
     STANDARD_PAGE_SIZES_MM = {
