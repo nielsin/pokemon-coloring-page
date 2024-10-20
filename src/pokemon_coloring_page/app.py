@@ -5,8 +5,13 @@ from functools import wraps
 from string import capwords
 
 import typer
-from prompt_toolkit import HTML, PromptSession, print_formatted_text
+from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import FuzzyCompleter, WordCompleter
+from rich.console import Console, Group
+from rich.padding import Padding
+from rich.panel import Panel
+from rich.table import Table
+from rich.text import Text
 from typing_extensions import Annotated
 
 from .config import Config as config
@@ -50,12 +55,8 @@ class PokemonColoringPageCLI:
     """Class for the Pokémon Coloring Page CLI."""
 
     def __init__(self):
-        self.color_page_setup = "gray"
-        self.color_selected_pokemon = "green"
-        self.color_unselected_pokemon = "gray"
-        self.color_message = "red"
-        self.color_highlight = "orange"
-        self.color_command = "skyblue"
+        self.console = Console()
+        self.panel_width = None
 
     def _n_pokemon(self):
         return self.ROWS * self.COLUMNS
@@ -64,13 +65,11 @@ class PokemonColoringPageCLI:
         if custom_colors:
             self.MESSAGES.append(message)
         else:
-            self.MESSAGES.append(
-                f"<{self.color_message}>{message}</{self.color_message}>"
-            )
+            self.MESSAGES.append(Text(message, style=config.COLOR_MESSAGE))
 
     def _print_messages(self):
         for message in self.MESSAGES:
-            print_formatted_text(HTML(message))
+            self.console.print(message)
         self.MESSAGES = []
 
     def _get_page_description(self):
@@ -109,97 +108,131 @@ class PokemonColoringPageCLI:
         if clear_screen:
             os.system("cls" if os.name == "nt" else "clear")
 
-        # Print page setup
-        for line in [
-            "<white>Pokémon </white><red>C</red><green>O</green><yellow>L</yellow><blue>O</blue><magenta>R</magenta><cyan>I</cyan><red>N</red><green>G</green><white> page CLI</white>",
-            f" <{self.color_page_setup}>Page size:\t{self.PAGE_WIDTH_MM}x{self.PAGE_HEIGHT_MM}mm ({self._get_page_description()})</{self.color_page_setup}>",
-            f" <{self.color_page_setup}>Outer margin:\t{self.OUTER_MARGIN_MM}mm</{self.color_page_setup}>",
-            f" <{self.color_page_setup}>Inner margin:\t{self.INNER_MARGIN_MM}mm</{self.color_page_setup}>",
-            f" <{self.color_page_setup}>Font size:\t{self.FONT_SIZE_MM}mm</{self.color_page_setup}>",
-            f" <{self.color_page_setup}>Grid:\t\t{self.COLUMNS}x{self.ROWS}</{self.color_page_setup}>",
-            f" <{self.color_page_setup}>Color:\t\t{self.COLOR}</{self.color_page_setup}>",
-            f" <{self.color_page_setup}>Crop:\t\t{self.CROP}</{self.color_page_setup}>",
-            f"Selected Pokémon (<{self.color_unselected_pokemon}>auto</{self.color_unselected_pokemon}>/<{self.color_selected_pokemon}>manual</{self.color_selected_pokemon}>):",
-        ]:
-            print_formatted_text(HTML(line))
+        title = Text("Pokémon ")
+        for letter in "COLORING":
+            title.append(letter, style=f"color({random.randint(1, 15)})")
+        title.append(" page CLI")
+        title.style = "bold"
+
+        page_setup = Table(show_header=False, box=None, style=config.COLOR_PAGE_SETUP)
+        page_setup.add_column("Option", style=config.COLOR_PAGE_SETUP)
+        page_setup.add_column("Value", style=config.COLOR_PAGE_SETUP)
+
+        page_setup.add_row(
+            "Page size",
+            f"{self.PAGE_WIDTH_MM}x{self.PAGE_HEIGHT_MM}mm ({self._get_page_description()})",
+        )
+        page_setup.add_row("Outer margin", f"{self.OUTER_MARGIN_MM}mm")
+        page_setup.add_row("Inner margin", f"{self.INNER_MARGIN_MM}mm")
+        page_setup.add_row("Font size", f"{self.FONT_SIZE_MM}mm")
+        page_setup.add_row("Grid", f"{self.COLUMNS}x{self.ROWS}")
+        page_setup.add_row("Color", f"{self.COLOR}")
+        page_setup.add_row("Crop", f"{self.CROP}")
+
+        selected_text = Text("Selected Pokémon (")
+        selected_text.append("auto", style=config.COLOR_UNSELECTED_POKEMON)
+        selected_text.append("/")
+        selected_text.append("manual", style=config.COLOR_SELECTED_POKEMON)
+        selected_text.append("):")
 
         # Print selected pokemon
         cc = 0
-
-        len_name = max(
-            [len(pokemon_id2name(pokemon_id)) for pokemon_id in self.selected_pokemon]
-        )
-        len_id = max([len(str(pokemon_id)) for pokemon_id in self.selected_pokemon])
+        selected_pokemon = Table(show_header=False, box=None)
+        selected_pokemon.add_column("Number")
+        selected_pokemon.add_column("Name")
+        selected_pokemon.add_column("Types")
 
         for pokemon_id in self.selected_pokemon:
             color = (
-                self.color_selected_pokemon
+                config.COLOR_SELECTED_POKEMON
                 if cc < self.user_selected_pokemon
-                else self.color_unselected_pokemon
+                else config.COLOR_UNSELECTED_POKEMON
             )
             pokemon_name = capwords(pokemon_id2name(pokemon_id))
             pokemon_types = capwords(", ".join(pokemon_id2types(pokemon_id)))
-            print_formatted_text(
-                HTML(
-                    f"<{color}> >> #{pokemon_id:<{len_id}} {pokemon_name:<{len_name}} [{pokemon_types}]</{color}>"
-                )
+
+            selected_pokemon.add_row(
+                str(pokemon_id), pokemon_name, pokemon_types, style=color
             )
+
             cc += 1
+
+        info_table = Table(
+            show_header=False,
+            show_lines=False,
+            show_edge=False,
+            caption_justify="left",
+        )
+        info_table.add_column("Selected Pokémon")
+        info_table.add_column("Page setup")
+
+        info_table.add_row(selected_text, "Page setup:")
+        info_table.add_row(selected_pokemon, page_setup)
+
+        info = [Padding(info_table, (1, 0))]
 
         # Filter
         if self.FILTER:
-            print_formatted_text(
-                HTML(
-                    f"Filter: <{self.color_highlight}>{capwords(self.FILTER)}</{self.color_highlight}>"
-                )
+            info_table.caption = (
+                f"Filter: [{config.COLOR_HIGHLIGHT}]{capwords(self.FILTER)}[/]"
             )
-        print_formatted_text(
-            HTML(
-                f"Use <{self.color_command}>:help</{self.color_command}> command for help.",
-            )
-        )
+
+        info.append(f"Use [{config.COLOR_COMMAND}]:help[/] command for help.")
+
+        info_panel = Panel(Group(*info), title=title, expand=False)
+
+        self.panel_width = info_panel.__rich_measure__(
+            self.console, self.console.options
+        ).maximum
+
+        self.console.print(info_panel)
 
     @command("help", command_help="Show help", command_short="h")
     def _help(self, _):
         # Build command description
-        command_desc = []
+
+        table = Table(
+            show_header=False,
+            box=None,
+            title="Available commands:",
+            title_justify="left",
+        )
+        table.add_column("Command")
+        table.add_column("Short", style=config.COLOR_COMMAND)
+        table.add_column("Description", style=config.COLOR_UNSELECTED_POKEMON)
+
         for command_name, command_info in self.commands.items():
-            command_arg_desc = (
-                command_info["arg_desc"] if command_info["arg_desc"] else ""
+            command = Text(f":{command_name}", style=config.COLOR_COMMAND)
+
+            if command_info["arg_desc"]:
+                command.append(
+                    f" {command_info['arg_desc']}",
+                    style=config.COLOR_UNSELECTED_POKEMON,
+                )
+
+            table.add_row(
+                command,
+                f":{command_info['short']}" if command_info["short"] else "",
+                command_info.get("help", ""),
             )
-            command_short = f":{command_info['short']}" if command_info["short"] else ""
-            command_short = (
-                f"<{self.color_command}>{command_short}</{self.color_command}>"
-            )
-
-            c = f" <{self.color_command}>:{command_name}</{self.color_command}> <{self.color_unselected_pokemon}>{command_arg_desc}</{self.color_unselected_pokemon}>"
-
-            command_help = command_info["help"] if command_info["help"] else ""
-            command_desc.append([c, command_help, command_short])
-
-        max_command_len = max([len(c) for c, i, s in command_desc])
-        max_short_len = max([len(s) for c, i, s in command_desc])
-
-        command_desc = [
-            f"{c:<{max_command_len}} {s:<{max_short_len}}  {i}"
-            for c, i, s in command_desc
-        ]
 
         msg_list = [
-            "",
             "The initial list of Pokémon is randomly selected.",
             "You can select others by typing in their name or id.",
             "Adding Pokémon will remove the last Pokémon in the list.",
-            "",
-            "Available commands:",
-            "\n".join(command_desc),
-            "",
-            f"Press <{self.color_highlight}>Enter</{self.color_highlight}> with empty prompt to generate coloring page and open in preview window.",
-            f"Use <{self.color_command}>:write</{self.color_command}> to genereate coloring page and save directly to file.",
-            "",
+            Padding(table, (1, 0)),
+            f"Press [{config.COLOR_HIGHLIGHT}]Enter[/] with empty prompt to generate coloring page and open in preview window.",
+            f"Use [{config.COLOR_COMMAND}]:write[/] to genereate coloring page and save directly to file.",
         ]
-        for msg in msg_list:
-            self._add_message(msg, custom_colors=True)
+
+        self._add_message(
+            Panel(
+                Group(*msg_list),
+                title="Help",
+                width=self.panel_width,
+            ),
+            custom_colors=True,
+        )
 
     @command("quit", command_help="Quit the CLI app", command_short="q")
     def _quit(self, _):
@@ -392,7 +425,7 @@ class PokemonColoringPageCLI:
         output_image.save(filename)
 
         self._add_message(
-            f"Coloring page saved to <{self.color_highlight}>{filename}</{self.color_highlight}>",
+            f"Coloring page saved to [{config.COLOR_HIGHLIGHT}]{filename}[/]",
             custom_colors=True,
         )
 
@@ -549,17 +582,15 @@ class PokemonColoringPageCLI:
                 user_input = self.session.prompt("> ")
 
                 if not user_input:
-                    print_formatted_text(
-                        HTML(
-                            f"<{self.color_highlight}>Generating coloring page...</{self.color_highlight}>"
-                        )
+                    self.console.print(
+                        f"[{config.COLOR_HIGHLIGHT}]Generating coloring page...[/]"
                     )
 
                     output_image = self._generate_coloring_page()
                     output_image.show()
 
                     self._add_message(
-                        f"<{self.color_highlight}>Coloring page generated.</{self.color_highlight}>",
+                        f"[{config.COLOR_HIGHLIGHT}]Coloring page generated.[/]",
                         custom_colors=True,
                     )
 

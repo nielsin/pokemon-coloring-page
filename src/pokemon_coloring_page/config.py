@@ -5,7 +5,7 @@ from pathlib import Path
 class Config:
     # Cache
     CACHE_DIR = Path.home() / ".cache" / "pokemon-coloring-page"
-    CACHE_AGE_LIMIT = timedelta(days=1)
+    CACHE_AGE_LIMIT = timedelta(days=7)
 
     # Attribution
     ATTRIBUTION = "Data source: pokeapi.co"
@@ -31,6 +31,13 @@ class Config:
     COLOR_NAMES = "gray"
     COLOR_TYPES = "gray"
     COLOR_ATTRIBUTION = "gray"
+
+    COLOR_PAGE_SETUP = "#808080"
+    COLOR_SELECTED_POKEMON = "#008000"
+    COLOR_UNSELECTED_POKEMON = "#808080"
+    COLOR_MESSAGE = "#ff0000"
+    COLOR_HIGHLIGHT = "#ffaf00"
+    COLOR_COMMAND = "#00afff"
 
     # Standard page sizes in mm (width, height) in portrait orientation
     STANDARD_PAGE_SIZES_MM = {
