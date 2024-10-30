@@ -1,6 +1,6 @@
 [project]
 name = "pokemon-coloring-page"
-version = "0.2.14"
+version = "0.3.0"
 description = "A simple coloring page genrator for Pokémon. Creates a page with multiple Pokémon to color in."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -9,6 +9,7 @@ dependencies = [
     "joblib>=1.4.2",
     "pillow>=10.4.0",
     "prompt-toolkit>=3.0.47",
+    "rich>=13.9.2",
     "typer>=0.12.5",
 ]
 
@@ -18,3 +19,9 @@ pokemon-coloring-page = "pokemon_coloring_page.app:main"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.uv]
+dev-dependencies = [
+    "ipykernel>=6.29.5",
+    "rich[jupyter]>=13.9.2",
+]
